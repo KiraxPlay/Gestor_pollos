@@ -1,40 +1,56 @@
-// class Huevos {
-//   final int id;
-//   final int LotePonedorasId;
-//   final int cantidad;
-//   final String fecha; // yyyy-MM-dd
-//   final int huevosRecogidos;
-//   final int huevosRotos;
+class RegistroHuevos {
+  final int? id;
+  final int loteId;
+  final String fecha;
+  final int cantidadHuevos;
 
-//   Huevos({
-//     required this.id,
-//     required this.LotePonedorasId,
-//     required this.cantidad,
-//     required this.fecha,
-//     required this.huevosRecogidos,
-//     required this.huevosRotos,
-//   });
+  RegistroHuevos({
+    this.id,
+    required this.loteId,
+    required this.fecha,
+    required this.cantidadHuevos,
+  });
 
-//   factory Huevos.fromMap(Map<String, dynamic> map) {
-//     return Huevos(
-//       id: map['id'],
-//       LotePonedorasId: map['lote_ponedoras_id'],
-//       cantidad: map['cantidad'],
-//       fecha: map['fecha'],
-//       huevosRecogidos: map['huevos_recogidos'],
-//       huevosRotos: map['huevos_rotos'],
-//     );
-//   }
+  RegistroHuevos copyWith({
+    int? id,
+    int? loteId,
+    String? fecha,
+    int? cantidadHuevos,
+  }) {
+    return RegistroHuevos(
+      id: id ?? this.id,
+      loteId: loteId ?? this.loteId,
+      fecha: fecha ?? this.fecha,
+      cantidadHuevos: cantidadHuevos ?? this.cantidadHuevos,
+    );
+  }
 
-//   Map<String, dynamic> toMap() {
-//     return {
-//       'id': id,
-//       'lote_ponedoras_id': LotePonedorasId,
-//       'cantidad': cantidad,
-//       'fecha': fecha,
-//       'huevos_recogidos': huevosRecogidos,
-//       'huevos_rotos': huevosRotos,
-//     };
-//   }
-// }
+  Map<String, dynamic> toMap() {
+    final map = <String, dynamic>{
+      'lote_id': loteId,
+      'fecha': fecha,
+      'cantidad_huevos': cantidadHuevos,
+    };
+    if (id != null) map['id'] = id;
+    return map;
+  }
 
+  Map<String, dynamic> toJson() => toMap();
+
+  factory RegistroHuevos.fromMap(Map<String, dynamic> map) {
+    int? parseInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      return int.tryParse(v.toString());
+    }
+
+    return RegistroHuevos(
+      id: parseInt(map['id']),
+      loteId: parseInt(map['lote_id'] ?? map['loteId'] ?? 0) ?? 0,
+      fecha: (map['fecha'] ?? '').toString(),
+      cantidadHuevos: parseInt(map['cantidad_huevos'] ?? map['cantidadHuevos'] ?? 0) ?? 0,
+    );
+  }
+
+  factory RegistroHuevos.fromJson(Map<String, dynamic> json) => RegistroHuevos.fromMap(json);
+}

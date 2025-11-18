@@ -7,7 +7,7 @@ import 'package:gestorgalpon_app/views/pesoGrafica.dart';
 import 'package:intl/intl.dart';
 import 'package:gestorgalpon_app/models/tipo_insumo.dart';
 import 'package:gestorgalpon_app/services/lote_service.dart';
-// import 'package:provider/provider.dart';
+import 'package:provider/provider.dart';
 import '../models/lotes.dart';
 import '../models/insumos.dart';
 import '../models/registropesos.dart';
@@ -292,12 +292,17 @@ class _LotesTableState extends State<LotesTable> {
             const Divider(height: 32),
 
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '⚖️ Registros de Peso:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                // Texto flexible que se ajusta al espacio disponible
+                Flexible(
+                  child: Text(
+                    '⚖️ Registros de Peso:',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
+                // El IconButton mantiene su tamaño fijo
                 IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: _agregarRegistroPeso,
@@ -404,7 +409,7 @@ class _LotesTableState extends State<LotesTable> {
                                                 fechaInicio:
                                                     widget.lote.fechaInicio,
                                                 pesoTeorico:
-                                                    calcularPesoTeorico
+                                                    calcularPesoTeorico,
                                               ),
                                         ),
                                       );
@@ -423,7 +428,8 @@ class _LotesTableState extends State<LotesTable> {
                               ),
                             ),
                           ),
-                        ).toList(),
+                        )
+                        .toList(),
                 ],
               ),
             ),

@@ -25,6 +25,9 @@ dependencies:
   device_info_plus: ^10.1.0
   shared_preferences: ^2.0.13
   crypto: ^3.0.6
+  http: ^1.5.0
+  connectivity_plus: ^4.0.2
+  synchronized: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -43,6 +46,9 @@ flutter:
    - assets/images/carga_lotes.png
    - assets/images/carga2_galpones.png
    - assets/images/saved.png
+   - assets/images/ponedoras.png
+   - assets/images/ponedoras2.png
+   - assets/images/no_huevos.png
 
  
 

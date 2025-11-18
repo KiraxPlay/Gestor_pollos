@@ -1,61 +1,138 @@
 import 'package:flutter/material.dart';
-import 'package:gestorgalpon_app/services/db_service.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../services/db_service.dart';
+import '../services/api_service.dart';
 import '../models/lotes.dart';
 import '../services/lote_service.dart';
+import '../services/sync_service.dart';
+import '../services/connectivity_service.dart';
 
 class LoteViewModel extends ChangeNotifier {
   List<Lotes> _lotes = [];
+  bool _isOnline = false;
+  bool _isSyncing = false;
+  String? _error;
 
   List<Lotes> get lotes => _lotes;
+  bool get isOnline => _isOnline;
+  bool get isSyncing => _isSyncing;
+  String? get error => _error;
+
+  LoteViewModel() {
+    _initializeConnectivity();
+    cargarLotes();
+  }
+
+  void _initializeConnectivity() {
+    final connectivity = ConnectivityService();
+    _isOnline = connectivity.isConnected;
+
+    connectivity.onConnectivityChanged.listen((result) {
+      _isOnline =
+          result == ConnectivityResult.wifi ||
+          result == ConnectivityResult.mobile;
+      notifyListeners();
+
+      if (_isOnline) {
+        print('Conectividad recuperada, sincronizando...');
+        syncPendingOperations();
+      }
+    });
+  }
 
   Future<void> cargarLotes() async {
-    _lotes = await LoteService.obtenerLotes();
-    notifyListeners();
-  }
-
-
-
-  Future<void> agregarLote(Lotes lote) async {
-    await LoteService.insertarLote(lote);
-    await cargarLotes();
-  }
-
-  Future<void> eliminarLote(int id) async {
     try {
-      await LoteService.eliminarLote(id);
-      await cargarLotes();
+      _error = null;
+      _lotes = await LoteService.obtenerLotes();
       notifyListeners();
     } catch (e) {
-      print('Error en ViewModel al eliminar lote: $e');
+      _error = e.toString();
+      print('Error cargando lotes: $e');
+      notifyListeners();
+    }
+  }
+
+  Future<void> agregarLote(Lotes lote) async {
+    try {
+      _error = null;
+      await LoteService.insertarLote(lote);
+      await cargarLotes();
+    } catch (e) {
+      _error = e.toString();
+      print('Error agregando lote: $e');
+      notifyListeners();
       rethrow;
     }
   }
 
-  Future<void> actualizarLoteLocal(Lotes loteActualizado) async {
-    final index = _lotes.indexWhere((l) => l.id == loteActualizado.id);
-    if (index != -1) {
-      _lotes[index] = loteActualizado;
+  Future<Lotes?> obtenerLote(int id) async {
+    try {
+      _error = null;
+      final lote = await LoteService.obtenerLotePorId(id);
+      return lote;
+    } catch (e) {
+      _error = e.toString();
+      print('Error obteniendo lote: $e');
       notifyListeners();
+      return null;
+    }
+  }
+
+  Future<void> eliminarLote(int id) async {
+    try {
+      _error = null;
+      await LoteService.eliminarLote(id);
+      await cargarLotes();
+    } catch (e) {
+      _error = e.toString();
+      print('Error eliminando lote: $e');
+      notifyListeners();
+      rethrow;
     }
   }
 
   Future<void> actualizarMuertos(int id, int nuevosMuertos) async {
     try {
-      // 1. Actualiza en SQLite
+      _error = null;
       await LoteService.actualizarCantidadMuertos(id, nuevosMuertos);
-
-      // 2. Actualiza en memoria
-      final index = _lotes.indexWhere((l) => l.id == id);
-      if (index != -1) {
-        _lotes[index] = _lotes[index].copyWith(cantidadMuertos: nuevosMuertos);
-        notifyListeners(); // Notifica a los widgets
-      }
-
-      // Opcional: Recargar desde DB para garantizar consistencia
       await cargarLotes();
     } catch (e) {
-      debugPrint('Error actualizando muertos: $e');
+      _error = e.toString();
+      print('Error actualizando muertos: $e');
+      notifyListeners();
       rethrow;
     }
+  }
+
+  Future<void> actualizarLote(Lotes lote) async {
+    try {
+      _error = null;
+      await LoteService.actualizarLote(lote);
+      await cargarLotes();
+    } catch (e) {
+      _error = e.toString();
+      print('Error actualizando lote: $e');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> syncPendingOperations() async {
+    if (_isSyncing) return;
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      await SyncService.syncAllPendingOperations();
+      await cargarLotes();
+      _error = null;
+    } catch (e) {
+      _error = 'Error sincronizando: $e';
+      print('Error en syncPendingOperations: $e');
+    }
+
+    _isSyncing = false;
+    notifyListeners();
   }
 }

@@ -177,7 +177,7 @@ import 'package:intl/intl.dart';
                 lotesId: loteActual.id!,
                 fecha: fechaController.text,
                 pesoPromedio: peso,
-                id: 0,
+                id: 0, 
               );
 
               await RegistroPesoService.insertarPeso(nuevo);

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gestorgalpon_app/licencia_home.dart';
+import 'package:gestorgalpon_app/models/ponedoras/registrohuevos.dart';
 import 'package:gestorgalpon_app/services/db_service.dart';
+import 'package:gestorgalpon_app/services/connectivity_service.dart';
 import 'package:gestorgalpon_app/services/licencia/guardarLiscencia.dart';
+import 'package:gestorgalpon_app/viewmodels/ponedoras/ponedoras_viewmodel.dart';
+import 'package:gestorgalpon_app/viewmodels/ponedoras/registrohuevos.dart';
 import 'package:gestorgalpon_app/views/Home.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -18,16 +22,23 @@ void main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
+  // Inicializar base de datos
   await DBService.database;
 
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => LoteViewModel()..cargarLotes(),
+  // Inicializar conectividad
+  await ConnectivityService().initialize();
+
+ runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LoteViewModel()..cargarLotes()),
+        ChangeNotifierProvider(create: (_) => PonederasViewModel()..cargarPonedoras()),
+        ChangeNotifierProvider(create: (_) => RegistroHuevosViewModel())
+      ],
       child: const MyApp(),
     ),
   );
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -85,7 +96,6 @@ class MyApp extends StatelessWidget {
               licenciaValida
                   ? const MenuImagen()
                   : const LicenciaInvalidaScreen(),
-          //valida que si licenciaValida es true mostrara el home , si no mandara a la pantalla de licencia invalida
         );
       },
     );

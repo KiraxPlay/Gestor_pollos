@@ -17,7 +17,7 @@ class VistaLotes extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'SmartGalpon',
+          'Pollos de Engorde',
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.bold,

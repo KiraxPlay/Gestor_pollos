@@ -2,123 +2,186 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
+import 'package:synchronized/synchronized.dart'; // ← AGREGAR ESTE IMPORT
 // import 'package:gestorgalpon_app/models/ponedoras/ponedoras.dart';
 // import 'package:gestorgalpon_app/models/ponedoras/registrohuevos.dart';
 
-
 class DBService {
   static Database? _database;
+  static final _lock = Lock(); // ← AGREGAR ESTE LOCK
 
   static Future<Database> get database async {
-    if (_database != null) return _database!;
-
-    try {
-      String dbPath;
-      if (kIsWeb) {
-        dbPath = 'bdGalpon.db';
-      } else if (Platform.isAndroid || Platform.isIOS) {
-        // Para dispositivos móviles
-        dbPath = join(await getDatabasesPath(), 'bdGalpon.db');
-      } else {
-        // Para desktop
-        dbPath = join('.', 'bdGalpon.db');
-      }
-
-      print('Intentando abrir base de datos en: $dbPath');
-
-      _database = await openDatabase(
-        dbPath,
-        version: 4,
-        onCreate: _createTables,
-        onOpen: (db) {
-          print('Base de datos abierta exitosamente');
-        },
-        
-        onUpgrade: (db  , oldVersion , newVersion) async {
-          if(oldVersion < 4) {
-            // await db.execute('ALTER TABLE Lotes ADD COLUMN precio_unitario REAL DEFAULT 0.0');
-            await db.execute('ALTER TABLE Lotes ADD COLUMN estado INTEGER DEFAULT 0');// Aquí puedes manejar actualizaciones de la base de datos si es necesario
-            print('Actualizando base de datos de versión $oldVersion a $newVersion');
-          }
-        }
-      );
-
+    // Usar lock para evitar acceso concurrente
+    return await _lock.synchronized(() async {
+      if (_database != null) return _database!;
+      _database = await _initDatabase();
       return _database!;
-    } catch (e) {
-      print('Error al abrir la base de datos: $e');
-      rethrow;
-    }
+    });
+  }
+
+  static Future<Database> _initDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'gestorgalpon.db');
+
+    return await openDatabase(
+      path,
+      version: 3,
+      onCreate: _createTables,
+      onUpgrade: _upgradeTables,
+    );
   }
 
   static Future<void> _createTables(Database db, int version) async {
-    try {
-      await db.transaction((txn) async {
-        // Crear tabla Lotes
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS Lotes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            cantidad_pollos INTEGER NOT NULL,
-            precio_unitario REAL DEFAULT 0.0,
-            fecha_inicio TEXT ,
-            cantidad_muertos INTEGER DEFAULT 0,
-            estado INTEGER DEFAULT 0 
-          )
-        ''');
+    // Tabla Lotes (engorde)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS lotes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        cantidad_pollos INTEGER,
+        precio_unitario REAL,
+        fecha_inicio TEXT,
+        cantidad_muertos INTEGER DEFAULT 0,
+        estado INTEGER DEFAULT 0
+      )
+    ''');
 
-        // Crear tabla Insumo
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS Insumos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            lotes_id INTEGER NOT NULL,
-            nombre TEXT NOT NULL,
-            cantidad INTEGER NOT NULL,
-            unidad TEXT NOT NULL,
-            precio REAL NOT NULL,
-            tipo TEXT NOT NULL,
-            fecha TEXT NOT NULL,
-            FOREIGN KEY (lotes_id) REFERENCES Lotes(id) ON DELETE CASCADE
-          )
-        ''');
+    // Tabla RegistroPeso
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS RegistroPeso (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lote_id INTEGER,
+        fecha TEXT,
+        peso_promedio REAL,
+        FOREIGN KEY(lote_id) REFERENCES lotes(id)
+      )
+    ''');
 
-        // Crear tabla RegistroPeso
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS RegistroPeso (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            lotes_id INTEGER NOT NULL,
-            fecha TEXT NOT NULL,
-            peso_promedio REAL NOT NULL,
-            FOREIGN KEY (lotes_id) REFERENCES Lotes(id) ON DELETE CASCADE
-          )
-        ''');
-        // Crear tabla LotePonedoras para futuro de version 2.0.0
-        // await txn.execute('''
-        //   CREATE TABLE IF NOT EXISTS LotePonedoras (
-        //     id INTEGER PRIMARY KEY AUTOINCREMENT,
-        //     nombre TEXT NOT NULL,
-        //     cantidad INTEGER NOT NULL,
-        //     fecha_inicio TEXT NOT NULL,
-        //     fecha_fin TEXT NOT NULL,
-        //     estado TEXT NOT NULL
-        //   )
-        // ''');
-        // // Crear tabla Huevos
-        // await txn.execute('''
-        //   CREATE TABLE IF NOT EXISTS Huevos (
-        //     id INTEGER PRIMARY KEY AUTOINCREMENT,
-        //     lote_ponedoras_id INTEGER NOT NULL,
-        //     cantidad INTEGER NOT NULL,
-        //     fecha TEXT NOT NULL,
-        //     huevos_recogidos INTEGER DEFAULT 0,
-        //     huevos_rotos INTEGER DEFAULT 0,
-        //     FOREIGN KEY (lote_ponedoras_id) REFERENCES LotePonedoras(id) ON DELETE CASCADE
-        //   )
-        // ''');
-      });
-      print('Tablas creadas exitosamente');
-    } catch (e) {
-      print('Error al crear las tablas: $e');
-      rethrow;
+    // Tabla Insumos
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS Insumos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lotes_id INTEGER,
+        nombre TEXT,
+        cantidad INTEGER,
+        unidad TEXT,
+        precio REAL,
+        tipo TEXT,
+        fecha TEXT,
+        FOREIGN KEY(lotes_id) REFERENCES lotes(id)
+      )
+    ''');
+
+    // Tabla Ponedoras
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS Ponedoras (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        cantidad_gallinas INTEGER,
+        precio_unitario REAL,
+        fecha_inicio TEXT,
+        cantidad_muerto INTEGER DEFAULT 0,
+        estado INTEGER DEFAULT 0,
+        edad_semanas INTEGER DEFAULT 0,
+        muertos_semanales INTEGER DEFAULT 0
+      )
+    ''');
+
+    // Tabla RegistroHuevos
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS RegistroHuevos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lote_id INTEGER,
+        fecha TEXT,
+        cantidad_huevos INTEGER,
+        FOREIGN KEY(lote_id) REFERENCES Ponedoras(id)
+      )
+    ''');
+
+    // Tabla InsumosPonedoras
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS InsumosPonedoras (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lotes_id INTEGER,
+        nombre TEXT,
+        cantidad INTEGER,
+        unidad TEXT,
+        precio REAL,
+        tipo TEXT,
+        fecha TEXT,
+        FOREIGN KEY(lotes_id) REFERENCES Ponedoras(id)
+      )
+    ''');
+
+    // Tabla SyncQueue (para operaciones pendientes) - CORREGIDA
+    await db.execute('''
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      operation TEXT,
+      table_name TEXT,
+      data TEXT,
+      timestamp INTEGER,
+      created_at TEXT  -- ← AGREGAR ESTA COLUMNA
+    )
+  ''');
+
+    print('✅ Tablas creadas exitosamente');
+  }
+
+  static Future<void> _upgradeTables(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 3) {
+      // Agregar tabla Ponedoras si no existe
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS Ponedoras (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nombre TEXT,
+          cantidad_gallinas INTEGER,
+          precio_unitario REAL,
+          fecha_inicio TEXT,
+          cantidad_muerto INTEGER DEFAULT 0,
+          estado INTEGER DEFAULT 0,
+          edad_semanas INTEGER DEFAULT 0,
+          muertos_semanales INTEGER DEFAULT 0
+        )
+      ''');
+
+      // Agregar tabla InsumosPonedoras si no existe
+      await db.execute('''
+      CREATE TABLE IF NOT EXISTS InsumosPonedoras (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lotes_id INTEGER,
+        nombre TEXT,
+        cantidad INTEGER,
+        unidad TEXT,
+        precio REAL,
+        tipo TEXT,
+        fecha TEXT,
+        FOREIGN KEY(lotes_id) REFERENCES Ponedoras(id)
+      )
+    ''');
+
+      // Agregar tabla RegistroHuevos si no existe
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS RegistroHuevos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          lotes_id INTEGER,
+          fecha TEXT,
+          cantidad_huevos INTEGER,
+          FOREIGN KEY(lote_id) REFERENCES Ponedoras(id)
+        )
+      ''');
+
+      try {
+        await db.execute('ALTER TABLE sync_queue ADD COLUMN created_at TEXT');
+        print('✅ Columna created_at agregada a sync_queue');
+      } catch (e) {
+        print('ℹ️ La columna created_at ya existe en sync_queue: $e');
+      }
+
+      print('✅ Tablas actualizadas exitosamente');
     }
   }
 }
