@@ -2,8 +2,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.20.6:8000/api';
-
+  //para poder probar desde el celular se pone la url de tu PC ya sea la de Ipv4 Wifi o Ipv4 Ethernet
+  static const String baseUrl = 'http://192.168.x.x:8000/api';
+  
   // ==================== ENGORDE ====================
 
   // LISTAR LOTES
