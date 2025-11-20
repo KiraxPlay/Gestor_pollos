@@ -1,16 +1,37 @@
 # gestorgalpon_app
 
-A new Flutter project.
+El frontend se desarrollo con Flutter ( lenguaje de programacion Dart)
 
-## Getting Started
+## Primeros pasos:
 
-This project is a starting point for a Flutter application.
+# Pre-requisitos
 
-A few resources to get you started if this is your first Flutter project:
+- Tener Flutter SDK instalado
+- Tener VSCode instalado
+- Tener la extensión "Flutter" y "Dart" instalada en VS Code
+  
+#Descargar flutter
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1.Ir a la pagina oficial de flutter https://flutter.dev/
+2.Navegar con el boton Get started
+3.Descarga el SDK para Windows
+4.Extrae el archivo ZIP en una ubicación permanente (ej: C:\flutter)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+#Configuraciones iniciales 
+1.Configuracion variables de entorno:
+  - Busca "Variables de entorno" en el menú inicio
+  - Haz clic en "Variables de entorno..."
+  - En "Variables del sistema", busca Path y haz clic en "Editar"
+  - Haz clic en "Nuevo" y agrega la ruta: C:\flutter\bin
+  - Haz clic en "Aceptar" para guardar
+    
+#Para verificar si flutter se instalo se pone en consola o terminal vscode flutter --version
+
+#Configuraciones finales
+1.Abre el vscode
+2.En terminal ( si se agrego el flutter en el PATH del sistema) 
+3.se pone flutter doctor 
+
+#Para descargas las dependencias por si acaso dentro en el proyecto se pone :
+- Flutter pub upgrade
+  Esto descargara las dependencias que vienen en el .yaml
