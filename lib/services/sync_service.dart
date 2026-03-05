@@ -1,4 +1,5 @@
 // services/sync_service.dart
+import 'package:gestorgalpon_app/services/ponedoras/api_service_ponedoras.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/lotes.dart';
 import 'api_service.dart';
@@ -29,17 +30,36 @@ class SyncService {
     required Map<String, dynamic> data,
   }) async {
     try {
-      final db = await DBService.database; // Esto ya usa el lock
+      final db = await DBService.database;
+
       await db.insert(_syncTableName, {
         'operation': operation,
         'table_name': tableName,
         'data': jsonEncode(data),
         'created_at': DateTime.now().toIso8601String(),
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'synced': 0,
       });
+
       print('✅ Operación encolada: $operation en $tableName');
     } catch (e) {
       print('❌ Error encolando operación: $e');
-      rethrow;
+
+      // FALLBACK: Intentar sin created_at si falla
+      try {
+        final db = await DBService.database;
+        await db.insert(_syncTableName, {
+          'operation': operation,
+          'table_name': tableName,
+          'data': jsonEncode(data),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'synced': 0,
+        });
+        print('✅ Operación encolada (fallback)');
+      } catch (e2) {
+        print('❌ Error crítico encolando operación: $e2');
+        rethrow;
+      }
     }
   }
 
@@ -54,7 +74,7 @@ class SyncService {
         orderBy: 'id ASC',
       );
     } catch (e) {
-      print('❌ Error obteniendo operaciones pendientes: $e');
+      print(' Error obteniendo operaciones pendientes: $e');
       return [];
     }
   }
@@ -69,9 +89,9 @@ class SyncService {
         where: 'id = ?',
         whereArgs: [id],
       );
-      print('✅ Operación marcada como sincronizada: $id');
+      print(' Operación marcada como sincronizada: $id');
     } catch (e) {
-      print('❌ Error marcando operación como sincronizada: $e');
+      print(' Error marcando operación como sincronizada: $e');
       rethrow;
     }
   }
@@ -82,19 +102,19 @@ class SyncService {
       final connectivity = ConnectivityService();
 
       if (!connectivity.isConnected) {
-        print('📶 No hay conexión. Sincronización pospuesta.');
+        print(' No hay conexión. Sincronización pospuesta.');
         return;
       }
 
-      print('🔄 Iniciando sincronización de operaciones pendientes');
+      print(' Iniciando sincronización de operaciones pendientes');
       final pendingOps = await getPendingOperations();
 
       if (pendingOps.isEmpty) {
-        print('✅ No hay operaciones pendientes de sincronizar');
+        print(' No hay operaciones pendientes de sincronizar');
         return;
       }
 
-      print('📋 Operaciones pendientes: ${pendingOps.length}');
+      print(' Operaciones pendientes: ${pendingOps.length}');
 
       for (var op in pendingOps) {
         try {
@@ -103,25 +123,25 @@ class SyncService {
           final data = jsonDecode(op['data']);
           final opId = op['id'];
 
-          print('🔄 Sincronizando: $operation en $tableName');
+          print(' Sincronizando: $operation en $tableName');
 
           bool success = await _procesarOperacion(operation, tableName, data);
 
           if (success) {
             await markAsSynced(opId);
-            print('✅ Operación sincronizada: $operation en $tableName');
+            print('Operación sincronizada: $operation en $tableName');
           } else {
-            print('⚠️ Operación no procesada: $operation en $tableName');
+            print(' Operación no procesada: $operation en $tableName');
           }
         } catch (e) {
-          print('❌ Error sincronizando operación $op: $e');
+          print(' Error sincronizando operación $op: $e');
           // NO marcar como sincronizada para reintentar después
         }
       }
 
-      print('🎉 Sincronización completada');
+      print(' Sincronización completada');
     } catch (e) {
-      print('💥 Error general en syncAllPendingOperations: $e');
+      print(' Error general en syncAllPendingOperations: $e');
     }
   }
 
@@ -132,27 +152,31 @@ class SyncService {
     Map<String, dynamic> data,
   ) async {
     try {
-      // 🐓 SISTEMA DE ENGORDE
+      //  SISTEMA DE ENGORDE
       if (tableName == 'lotes') {
         return await _procesarEngorde(operation, data);
       }
-      // 🐔 SISTEMA DE PONEDORAS
+      //  REGISTROS DE PESO
+      else if (tableName == 'registro_peso') {
+        return await _procesarRegistroPeso(operation, data);
+      }
+      //  SISTEMA DE PONEDORAS
       else if (tableName == 'Ponedoras') {
         return await _procesarPonedoras(operation, data);
       }
-      // 🥚 REGISTROS DE HUEVOS
+      //  REGISTROS DE HUEVOS
       else if (tableName == 'RegistroHuevos') {
         return await _procesarRegistroHuevos(operation, data);
       }
-      // 🧪 INSUMOS DE PONEDORAS
+      //  INSUMOS DE PONEDORAS
       else if (tableName == 'Insumos') {
         return await _procesarInsumosPonedoras(operation, data);
       }
 
-      print('❌ Tabla no reconocida: $tableName');
+      print(' Tabla no reconocida: $tableName');
       return false;
     } catch (e) {
-      print('❌ Error procesando operación: $e');
+      print(' Error procesando operación: $e');
       return false;
     }
   }
@@ -172,7 +196,7 @@ class SyncService {
           return true;
         }
       } else if (operation == 'UPDATE_MORTALIDAD') {
-        // 🆕 Manejar actualización de mortalidad
+        //  Manejar actualización de mortalidad
         await ApiService.registrarMortalidad({
           'lote_id': data['id'],
           'cantidad_muerta': data['cantidad_muerta_agregada'],
@@ -182,23 +206,65 @@ class SyncService {
 
       return false;
     } catch (e) {
-      print('❌ Error en procesarEngorde: $e');
+      print(' Error en procesarEngorde: $e');
       return false;
     }
   }
 
-  /// 🐔 Procesa operaciones del sistema de ponedoras
+  /// ⚖️ Procesa operaciones de registros de peso
+  static Future<bool> _procesarRegistroPeso(
+    String operation,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      if (operation == 'INSERT') {
+        // Asegurar que los nombres de campo coincidan con tu API Django
+        final datosCorregidos = {
+          'lotes_id': data['lotes_id'] ?? data['lotesId'],
+          'fecha': data['fecha'],
+          'peso_promedio': data['peso_promedio'] ?? data['pesoPromedio'],
+        };
+        await ApiService.registrarPeso(datosCorregidos);
+        return true;
+      } else if (operation == 'UPDATE') {
+        // Manejar actualización de registros de peso
+        final datosCorregidos = {
+          'id': data['id'],
+          'lotes_id': data['lotes_id'] ?? data['lotesId'],
+          'fecha': data['fecha'],
+          'peso_promedio': data['peso_promedio'] ?? data['pesoPromedio'],
+        };
+        await ApiService.registrarPeso(datosCorregidos);
+        return true;
+      } else if (operation == 'DELETE') {
+        // Manejar eliminación de registros de peso
+        if (data['id'] != null) {
+          // Si tu API no tiene endpoint para eliminar pesos,
+          // descomentar la siguiente línea:
+          // await ApiService.eliminarRegistroPeso(data['id']);
+          print('⚠️ Eliminación de registro de peso: ${data['id']}');
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error en procesarRegistroPeso: $e');
+      return false;
+    }
+  }
+
+  ///  Procesa operaciones del sistema de ponedoras
   static Future<bool> _procesarPonedoras(
     String operation,
     Map<String, dynamic> data,
   ) async {
     try {
       if (operation == 'INSERT') {
-        await ApiService.crearPonedora(data);
+        await ApiServicePonedoras.crearPonedora(data);
         return true;
       } else if (operation == 'DELETE') {
         if (data['id'] != null) {
-          await ApiService.eliminarPonedora(data['id']);
+          await ApiServicePonedoras.eliminarPonedora(data['id']);
           return true;
         }
       }
@@ -209,7 +275,7 @@ class SyncService {
     }
   }
 
-  /// 🥚 Procesa operaciones de registros de huevos
+  ///  Procesa operaciones de registros de huevos
   static Future<bool> _procesarRegistroHuevos(
     String operation,
     Map<String, dynamic> data,
@@ -222,7 +288,7 @@ class SyncService {
           'fecha': data['fecha'],
           'cantidad_huevos': data['cantidadHuevos'] ?? data['cantidad_huevos'],
         };
-        await ApiService.agregarRegistroHuevos(datosCorregidos);
+        await ApiServicePonedoras.agregarRegistroHuevos(datosCorregidos);
         return true;
       }
       // Agregar UPDATE y DELETE si es necesario
@@ -250,18 +316,18 @@ class SyncService {
           'tipo': data['tipo'],
           'fecha': data['fecha'],
         };
-        await ApiService.agregarInsumoPonedora(datosCorregidos);
+        await ApiServicePonedoras.agregarInsumoPonedora(datosCorregidos);
         return true;
       } else if (operation == 'DELETE') {
-        // 🆕 Manejar eliminación de insumos
+        //  Manejar eliminación de insumos
         if (data['id'] != null) {
-          await ApiService.eliminarInsumoPonedora(data['id']);
+          await ApiServicePonedoras.eliminarInsumoPonedora(data['id']);
           return true;
         }
       }
       return false;
     } catch (e) {
-      print('❌ Error en procesarInsumosPonedoras: $e');
+      print(' Error en procesarInsumosPonedoras: $e');
       return false;
     }
   }

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gestorgalpon_app/licencia_home.dart';
 import 'package:gestorgalpon_app/models/ponedoras/registrohuevos.dart';
 import 'package:gestorgalpon_app/services/db_service.dart';
 import 'package:gestorgalpon_app/services/connectivity_service.dart';
-import 'package:gestorgalpon_app/services/licencia/guardarLiscencia.dart';
 import 'package:gestorgalpon_app/viewmodels/ponedoras/ponedoras_viewmodel.dart';
 import 'package:gestorgalpon_app/viewmodels/ponedoras/registrohuevos.dart';
 import 'package:gestorgalpon_app/views/Home.dart';
@@ -12,6 +10,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import 'viewmodels/lote_viewmodel.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,13 +21,15 @@ void main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
+
+
   // Inicializar base de datos
   await DBService.database;
 
   // Inicializar conectividad
   await ConnectivityService().initialize();
 
- runApp(
+  runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LoteViewModel()..cargarLotes()),
@@ -39,65 +40,27 @@ void main() async {
     ),
   );
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // Función que verifica la licencia
-  Future<bool> verificarLicencia() async {
-    try {
-      final licencia = await LicenciaService.obtenerLicencia();
-      final deviceId = await LicenciaService.getDeviceId();
-
-      if (licencia == null || deviceId == null) {
-        return false;
-      }
-
-      final esValida = licencia.esValida(deviceId);
-
-      if (!esValida) {
-        await LicenciaService.borrarLicencia();
-      }
-
-      return esValida;
-    } catch (e) {
-      print('Error verificando licencia: $e');
-      return false;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: verificarLicencia(),
-      builder: (context, snapshot) {
-        // Mientras se verifica
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const MaterialApp(
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
-          );
-        }
-
-        final licenciaValida = snapshot.data ?? false;
-
-        return MaterialApp(
-          title: 'SmartGalpon',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.yellow),
-            useMaterial3: true,
-            cardTheme: const CardTheme(elevation: 4, margin: EdgeInsets.all(8)),
-            appBarTheme: AppBarTheme(
-              elevation: 0,
-              centerTitle: true,
-              backgroundColor: Colors.yellow.shade300,
-              foregroundColor: Colors.black,
-            ),
-          ),
-          home:
-              licenciaValida
-                  ? const MenuImagen()
-                  : const LicenciaInvalidaScreen(),
-        );
-      },
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'SmartGalpon',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.yellow),
+        useMaterial3: true,
+        cardTheme: const CardTheme(elevation: 4, margin: EdgeInsets.all(8)),
+        appBarTheme: AppBarTheme(
+          elevation: 0,
+          centerTitle: true,
+          backgroundColor: Colors.yellow.shade300,
+          foregroundColor: Colors.black,
+        ),
+      ),
+      home: const MenuImagen(),
     );
   }
 }

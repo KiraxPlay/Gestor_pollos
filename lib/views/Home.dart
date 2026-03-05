@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'vista_galpones.dart';
-import 'ponedoras/vista_ponedoras.dart'; 
+import 'ponedoras/vista_ponedoras.dart';
+import 'package:gestorgalpon_app/games/screens/mini_galpon_simulator.dart'; 
 
 class MenuImagen extends StatelessWidget {
   const MenuImagen({super.key});
@@ -9,8 +10,6 @@ class MenuImagen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -32,126 +31,183 @@ class MenuImagen extends StatelessWidget {
             colors: [Colors.yellow.shade50, Colors.white],
           ),
         ),
-        child: SingleChildScrollView(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 20),
-                // TARJETA ENGORDE (Lotes de pollos)
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const VistaLotes(),
-                      ),
-                    );
-                  },
-                  child: _buildMenuCard(
-                    size: size,
-                    imagePath: pollo,
-                    title: 'Gestión de Engorde',
-                    subtitle: 'Ver tus lotes de pollos',
+        child: GridView.count(
+          crossAxisCount: 1,
+          childAspectRatio: 0.9,
+          padding: const EdgeInsets.all(16),
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          children: [
+            // TARJETA ENGORDE (Lotes de pollos)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const VistaLotes(),
                   ),
-                ),
-                const SizedBox(height: 30),
-                // TARJETA PONEDORAS
-                GestureDetector(
-                  onTap: () {
-                     Navigator.push(
-                       context,
-                       MaterialPageRoute(
-                         builder: (context) => const VistaPonedoras(),
-                       ),
-                    );
-                  },
-                  child: _buildMenuCard(
-                    size: size,
-                    imagePath: gallina,
-                    title: 'Gestión de Ponedoras',
-                    subtitle: 'Ver tus gallinas ponedoras',
-                  ),
-                ),
-                const SizedBox(height: 30),
-              ],
+                );
+              },
+              child: _buildMenuCard(
+                imagePath: pollo,
+                title: 'Gestión de Engorde',
+                subtitle: 'Ver tus lotes de pollos',
+              ),
             ),
-          ),
+            // TARJETA PONEDORAS
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const VistaPonedoras(),
+                  ),
+                );
+              },
+              child: _buildMenuCard(
+                imagePath: gallina,
+                title: 'Gestión de Ponedoras',
+                subtitle: 'Ver tus gallinas ponedoras',
+              ),
+            ),
+            // TARJETA JUEGO - SIMULADOR
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MiniGalponSimulator(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.orange.shade300, Colors.orange.shade500],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      spreadRadius: 2,
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'JUEGO SERIO ',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'SimuGalpon',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Aprende a gestionar tu galpón',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildMenuCard({
-    required Size size,
     required String imagePath,
     required String title,
     required String subtitle,
   }) {
-    return Column(
-      children: [
-        Container(
-          width: size.width * 0.8,
-          height: size.height * 0.3,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                spreadRadius: 2,
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.cover,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                child: Image.asset(
+                  imagePath,
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 15),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 10,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.yellow.shade100,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
+          Expanded(
+            flex: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          child: Column(
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

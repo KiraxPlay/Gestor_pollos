@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:gestorgalpon_app/models/ponedoras/registrohuevos.dart';
 import 'package:gestorgalpon_app/services/ponedoras/registrohuevos.dart';
+import 'package:gestorgalpon_app/services/ponedoras/ponedoras_service.dart';
 import 'package:intl/intl.dart';
 import '../../../models/ponedoras/ponedoras.dart';
 
@@ -87,6 +88,12 @@ Future<void> mostrarDialogoRegistroHuevos({
                     cantidadHuevos: int.parse(cantidadCtrl.text),
                   ),
                 );
+                
+                // 🔄 Actualizar estado a 1 si la ponedora estaba inactiva
+                if (ponedoraActual.estado == 0) {
+                  final ponedoraActualizada = ponedoraActual.copyWith(estado: 1);
+                  await PonederasService.actualizarPonedora(ponedoraActualizada);
+                }
                 
                 onHuevosRegistrados();
                 Navigator.pop(ctx);

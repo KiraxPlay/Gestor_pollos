@@ -3,7 +3,7 @@ import '../../models/ponedoras/ponedoras.dart';
 import '../db_service.dart';
 import '../connectivity_service.dart';
 import '../sync_service.dart';
-import '../api_service.dart';
+import '../ponedoras/api_service_ponedoras.dart';
 
 class PonederasService {
   static const String _tableName = 'Ponedoras';
@@ -17,7 +17,7 @@ class PonederasService {
     try {
       if (connectivity.isConnected) {
         print('📡 Intentando obtener ponedoras del backend...');
-        final datosBackend = await ApiService.obtenerPonedoras();
+        final datosBackend = await ApiServicePonedoras.obtenerPonedoras();
         print('✅ Backend devolvió: $datosBackend');
         
         final ponedoras = List<Ponedoras>.from(
@@ -59,7 +59,7 @@ class PonederasService {
     try {
       if (connectivity.isConnected) {
         print('📡 Intentando crear ponedora en backend...');
-        final response = await ApiService.crearPonedora(ponedora.toJson());
+        final response = await ApiServicePonedoras.crearPonedora(ponedora.toJson());
         print('✅ Respuesta backend: $response');
         
         if (response is Map<String, dynamic> && response['lote_id'] != null) {
@@ -104,7 +104,7 @@ class PonederasService {
     try {
       if (connectivity.isConnected) {
         print('📡 Intentando obtener del backend...');
-        final data = await ApiService.detallePonedora(id);
+        final data = await ApiServicePonedoras.detallePonedora(id);
         print('✅ Backend devolvió: $data');
         
         if (data is Map<String, dynamic> && data['lote'] != null) {
@@ -190,7 +190,7 @@ class PonederasService {
     try {
       if (connectivity.isConnected) {
         print('📡 Intentando eliminar del backend...');
-        await ApiService.eliminarPonedora(id);
+        await ApiServicePonedoras.eliminarPonedora(id);
         print('✅ Eliminada del backend');
       } else {
         print('📴 Sin conexión, encolando eliminación...');

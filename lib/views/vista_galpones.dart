@@ -4,7 +4,6 @@ import 'package:gestorgalpon_app/layouts/components/agregar_lote_dialog.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/lote_viewmodel.dart';
-import '../models/lotes.dart';
 import 'lotesTable.dart'; // Asegúrate de importar la vista de detalle
 
 class VistaLotes extends StatelessWidget {
@@ -26,137 +25,211 @@ class VistaLotes extends StatelessWidget {
         ),
       ),
       body:
-          loteVM.lotes.isEmpty
+          loteVM.isLoading
               ? const Center(
-                child: Image(
-                  image: AssetImage('assets/images/carga_lotes.png'),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Cargando pollos de engorde...'),
+                  ],
                 ),
               )
-              : ListView.builder(
-                itemCount: loteVM.lotes.length,
-                itemBuilder: (context, index) {
-                  final lote = loteVM.lotes[index];
-                  return ListTile(
-                    title: Text(
-                      lote.nombre,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black87,
-                      ),
+              : loteVM.error != null && loteVM.lotes.isEmpty
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red.shade700,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error al cargar lotes',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            loteVM.error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.red.shade600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () => loteVM.cargarLotes(),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
                     ),
-                    subtitle: Text(
-                      '🐔 pollos: ${lote.cantidadPollos} \n'
-                      '📅 Fecha de inicio: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(lote.fechaInicio))}\n'
-                      '💰 Precio unitario:\$${lote.precioUnitario.toStringAsFixed(2)} c/u\n'
-                      '💵 Precio total: \$${(lote.cantidadPollos * lote.precioUnitario).toStringAsFixed(2)}\n'
-                      'Estado: ${lote.estado == 0 ? '🔴 Inactivo' : '🟢 Activo'}\n',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    onLongPress: () {
-                      if (lote.estado == 1) {
-                        // Alerta de lote activo
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              backgroundColor: Colors.red.shade50,
-                              title: Column(
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    color: Colors.red,
-                                    size: 48,
+                  )
+                  : loteVM.lotes.isEmpty
+                      ? const Center(
+                        child: Image(
+                          image: AssetImage('assets/images/carga_lotes.png'),
+                        ),
+                      )
+                      : GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 1,
+                          childAspectRatio: 1.5,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                        ),
+                        itemCount: loteVM.lotes.length,
+                        itemBuilder: (context, index) {
+                          final lote = loteVM.lotes[index];
+                          return Card(
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => LotesTable(lote: lote),
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'No se puede eliminar',
-                                    style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Este lote está activo y no puede ser eliminado.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.red.shade700,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Para eliminar el lote, primero debe estar inactivo.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.red.shade400,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.red.shade100,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    child: Text(
-                                      'Entendido',
-                                      style: TextStyle(
-                                        color: Colors.red.shade700,
-                                        fontWeight: FontWeight.bold,
+                                );
+                              },
+                              onLongPress: () {
+                                if (lote.estado == 1) {
+                                  // Alerta de lote activo
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        backgroundColor: Colors.red.shade50,
+                                        title: Column(
+                                          children: [
+                                            Icon(
+                                              Icons.error_outline,
+                                              color: Colors.red,
+                                              size: 48,
+                                            ),
+                                            SizedBox(height: 8),
+                                            Text(
+                                              'No se puede eliminar',
+                                              style: TextStyle(
+                                                color: Colors.red.shade700,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Este lote está activo y no puede ser eliminado.',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.red.shade700,
+                                              ),
+                                            ),
+                                            SizedBox(height: 8),
+                                            Text(
+                                              'Para eliminar el lote, primero debe estar inactivo.',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.red.shade400,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            style: TextButton.styleFrom(
+                                              backgroundColor: Colors.red.shade100,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 8,
+                                              ),
+                                              child: Text(
+                                                'Entendido',
+                                                style: TextStyle(
+                                                  color: Colors.red.shade700,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                } else {
+                                  // Alerta de confirmación de eliminación
+                                  showDialog(
+                                    context: context,
+                                    builder:
+                                        (BuildContext context) =>
+                                            ConfirmarEliminacionDialog(lote: lote),
+                                  );
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      lote.nombre,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.black87,
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '🐔 pollos: ${lote.cantidadPollos} \n'
+                                      '📅 Fecha de inicio: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(lote.fechaInicio))}\n'
+                                      '💰 Precio unitario:\$${lote.precioUnitario.toStringAsFixed(2)} c/u\n'
+                                      '💵 Precio total: \$${(lote.cantidadPollos * lote.precioUnitario).toStringAsFixed(2)}\n'
+                                      'Estado: ${lote.estado == 0 ? '🔴 Inactivo' : '🟢 Activo'}\n',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            );
-                          },
-                        );
-                      } else {
-                        // Alerta de confirmación de eliminación
-                        showDialog(
-                          context: context,
-                          builder:
-                              (BuildContext context) =>
-                                  ConfirmarEliminacionDialog(lote: lote),
-                        );
-                      }
-                    },
-                    //Onpresss de eliminar lote
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => LotesTable(lote: lote),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-
+                              ),
+                            ),
+                          );
+                        },
+                      ),
       floatingActionButton: FloatingActionButton.extended(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         backgroundColor: Colors.yellow.shade200,

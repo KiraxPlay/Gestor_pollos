@@ -1,9 +1,10 @@
 // layouts/components/ponedoras/nuevo_insumo_ponedoras.dart
 import 'package:flutter/material.dart';
-import 'package:gestorgalpon_app/views/ponedoras/insumos_ponedoras.dart';
+import 'package:gestorgalpon_app/models/ponedoras/insumos_ponedoras.dart';
 import 'package:intl/intl.dart';
 import '../../../models/ponedoras/ponedoras.dart';
 import '../../../services/ponedoras/insumos_ponedoras_service.dart';
+import '../../../services/ponedoras/ponedoras_service.dart';
 
 Future<void> mostrarDialogoInsumoPonedoras({
   required BuildContext context,
@@ -218,6 +219,12 @@ Future<void> mostrarDialogoInsumoPonedoras({
                       fecha: DateFormat('yyyy-MM-dd').format(fechaSeleccionada),
                     ),
                   );
+                  
+                  // 🔄 Actualizar estado a 1 si la ponedora estaba inactiva
+                  if (ponedoraActual.estado == 0) {
+                    final ponedoraActualizada = ponedoraActual.copyWith(estado: 1);
+                    await PonederasService.actualizarPonedora(ponedoraActualizada);
+                  }
                   
                   onInsumoRegistrado();
                   Navigator.pop(ctx);

@@ -11,11 +11,13 @@ class LoteViewModel extends ChangeNotifier {
   List<Lotes> _lotes = [];
   bool _isOnline = false;
   bool _isSyncing = false;
+  bool _isLoading = false;
   String? _error;
 
   List<Lotes> get lotes => _lotes;
   bool get isOnline => _isOnline;
   bool get isSyncing => _isSyncing;
+  bool get isLoading => _isLoading;
   String? get error => _error;
 
   LoteViewModel() {
@@ -41,12 +43,16 @@ class LoteViewModel extends ChangeNotifier {
   }
 
   Future<void> cargarLotes() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
     try {
-      _error = null;
       _lotes = await LoteService.obtenerLotes();
+      _isLoading = false;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
+      _isLoading = false;
       print('Error cargando lotes: $e');
       notifyListeners();
     }

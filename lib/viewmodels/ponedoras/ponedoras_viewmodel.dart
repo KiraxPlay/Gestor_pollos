@@ -9,11 +9,13 @@ class PonederasViewModel extends ChangeNotifier {
   List<Ponedoras> _ponedoras = [];
   bool _isOnline = false;
   bool _isSyncing = false;
+  bool _isLoading = false;
   String? _error;
 
   List<Ponedoras> get ponedoras => _ponedoras;
   bool get isOnline => _isOnline;
   bool get isSyncing => _isSyncing;
+  bool get isLoading => _isLoading;
   String? get error => _error;
 
   PonederasViewModel() {
@@ -37,12 +39,16 @@ class PonederasViewModel extends ChangeNotifier {
   }
 
   Future<void> cargarPonedoras() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
     try {
-      _error = null;
       _ponedoras = await PonederasService.obtenerPonedoras();
+      _isLoading = false;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
+      _isLoading = false;
       print('Error cargando ponedoras: $e');
       notifyListeners();
     }

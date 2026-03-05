@@ -1,5 +1,5 @@
 import 'package:sqflite/sqflite.dart';
-import '../models/registropesos.dart';
+import '../models/registro_peso.dart';
 import 'db_service.dart';
 import 'connectivity_service.dart';
 import 'sync_service.dart';
@@ -13,7 +13,10 @@ class RegistroPesoService {
     final connectivity = ConnectivityService();
 
     try {
-      if (await connectivity.isConnected) {
+      // Verificar conectividad actual
+      final hasConnection = await connectivity.checkConnection();
+
+      if (hasConnection) {
         // ✅ ONLINE: Enviar al servidor - usar toJson() para API
         try {
           await ApiService.registrarPeso(
@@ -33,12 +36,13 @@ class RegistroPesoService {
       );
 
       // 🔄 Encolar para sincronización si está offline
-      if (!(await connectivity.isConnected)) {
+      if (!hasConnection) {
         await SyncService.queueOperation(
           operation: 'INSERT',
           tableName: 'registro_peso',
           data: registroPeso.toJson(), // ← toJson() para sync
         );
+        print('📝 Registro de peso encolado para sincronización');
       }
 
       return id;
@@ -90,12 +94,14 @@ class RegistroPesoService {
       await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
 
       // Encolar eliminación si está offline
-      if (!(await connectivity.isConnected)) {
+      final hasConnection = await connectivity.checkConnection();
+      if (!hasConnection) {
         await SyncService.queueOperation(
           operation: 'DELETE',
           tableName: 'registro_peso',
           data: {'id': id},
         );
+        print('📝 Eliminación de peso encolada para sincronización');
       }
     } catch (e) {
       rethrow;
@@ -116,12 +122,14 @@ class RegistroPesoService {
       );
 
       // Encolar actualización si está offline
-      if (!(await connectivity.isConnected)) {
+      final hasConnection = await connectivity.checkConnection();
+      if (!hasConnection) {
         await SyncService.queueOperation(
           operation: 'UPDATE',
           tableName: 'registro_peso',
-          data: registroPeso.toMap(),
+          data: registroPeso.toJson(),
         );
+        print('📝 Actualización de peso encolada para sincronización');
       }
     } catch (e) {
       rethrow;
@@ -131,7 +139,8 @@ class RegistroPesoService {
   // Método para sincronizar pendientes
   static Future<void> sincronizarPesosPendientes() async {
     final connectivity = ConnectivityService();
-    if (await connectivity.isConnected) {
+    final hasConnection = await connectivity.checkConnection();
+    if (hasConnection) {
       await SyncService.syncAllPendingOperations();
     }
   }

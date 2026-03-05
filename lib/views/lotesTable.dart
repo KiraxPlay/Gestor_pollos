@@ -10,7 +10,7 @@ import 'package:gestorgalpon_app/services/lote_service.dart';
 import 'package:provider/provider.dart';
 import '../models/lotes.dart';
 import '../models/insumos.dart';
-import '../models/registropesos.dart';
+import '../models/registro_peso.dart';
 import '../services/insumo_service.dart';
 import '../services/registropeso_service.dart';
 
@@ -410,6 +410,7 @@ class _LotesTableState extends State<LotesTable> {
                                                     widget.lote.fechaInicio,
                                                 pesoTeorico:
                                                     calcularPesoTeorico,
+                                                loteId: widget.lote.id ?? 0,
                                               ),
                                         ),
                                       );

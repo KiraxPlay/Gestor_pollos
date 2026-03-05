@@ -1,13 +1,61 @@
 // services/ponedoras/insumos_ponedoras_service.dart
-import 'package:gestorgalpon_app/views/ponedoras/insumos_ponedoras.dart';
+import 'package:gestorgalpon_app/models/ponedoras/insumos_ponedoras.dart';
 import 'package:sqflite/sqflite.dart';
 import '../db_service.dart';
 import '../connectivity_service.dart';
 import '../sync_service.dart';
-import '../api_service.dart';
+import '../ponedoras/api_service_ponedoras.dart';
 
 class InsumosPonedorasService {
   static const String _tableName = 'InsumosPonedoras';
+
+  static Future<void> eliminarInsumoPonedora(int insumoId) async {
+    final db = await DBService.database;
+    final connectivity = ConnectivityService();
+
+    print('🔍 Eliminando insumo ponedora ID: $insumoId');
+
+    try {
+      // PRIMERO eliminar localmente
+      final rowsAffected = await db.delete(
+        _tableName,
+        where: 'id = ?',
+        whereArgs: [insumoId],
+      );
+
+      if (rowsAffected == 0) {
+        throw Exception('Insumo con ID $insumoId no encontrado localmente');
+      }
+
+      print('✅ Insumo eliminado localmente');
+
+      // LUEGO intentar eliminar en el servidor o encolar
+      if (connectivity.isConnected) {
+        print('📡 Intentando eliminar en el backend...');
+        try {
+          await ApiServicePonedoras.eliminarInsumoPonedora(insumoId);
+          print('✅ Insumo eliminado en el backend');
+        } catch (e) {
+          print('⚠️ Falló eliminación directa, encolando...: $e');
+          await SyncService.queueOperation(
+            operation: 'DELETE',
+            tableName: _tableName,
+            data: {'id': insumoId},
+          );
+        }
+      } else {
+        print('📴 Sin conexión, encolando...');
+        await SyncService.queueOperation(
+          operation: 'DELETE',
+          tableName: _tableName,
+          data: {'id': insumoId},
+        );
+      }
+    } catch (e) {
+      print('❌ Error eliminando insumo: $e');
+      rethrow;
+    }
+  }
 
   static Future<List<InsumoPonedora>> obtenerInsumosPorLote(int loteId) async {
     final db = await DBService.database;
@@ -57,7 +105,7 @@ class InsumosPonedorasService {
       if (connectivity.isConnected) {
         print('📡 Intentando enviar al backend...');
         try {
-          await ApiService.agregarInsumoPonedora({
+          await ApiServicePonedoras.agregarInsumoPonedora({
             'lotes_id': insumo.lotesId,
             'nombre': insumo.nombre,
             'cantidad': insumo.cantidad,

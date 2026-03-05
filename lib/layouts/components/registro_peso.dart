@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gestorgalpon_app/models/lotes.dart';
-import 'package:gestorgalpon_app/models/registropesos.dart';
+import 'package:gestorgalpon_app/models/registro_peso.dart';
 import 'package:gestorgalpon_app/services/registropeso_service.dart';
 import 'package:intl/intl.dart';
 

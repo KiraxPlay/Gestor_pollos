@@ -3,7 +3,6 @@ import 'package:gestorgalpon_app/views/ponedoras/detalle_ponedora.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/ponedoras/ponedoras_viewmodel.dart';
-import '../../models/ponedoras/ponedoras.dart';
 import '../../layouts/components/ponedoras/agregar_ponedoras_dialog.dart';
 
 class VistaPonedoras extends StatelessWidget {
@@ -27,47 +26,181 @@ class VistaPonedoras extends StatelessWidget {
         ),
         body: Consumer<PonederasViewModel>(
           builder: (context, ponedeVM, _) {
-            if (ponedeVM.ponedoras.isEmpty) {
+            //  Mostrar indicador de carga
+            if (ponedeVM.isLoading) {
               return const Center(
-                child: Image(
-                  image: AssetImage('assets/images/ponedoras2.png'),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Cargando lotes de ponedoras...'),
+                  ],
                 ),
               );
             }
 
-            return ListView.builder(
+            //  Mostrar error si hay
+            if (ponedeVM.error != null && ponedeVM.ponedoras.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red.shade700,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error al cargar ponedoras',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        ponedeVM.error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.red.shade600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => ponedeVM.cargarPonedoras(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            //  Mostrar lista vacía
+            if (ponedeVM.ponedoras.isEmpty) {
+              return const Center(
+                child: Image(image: AssetImage('assets/images/ponedoras2.png')),
+              );
+            }
+
+            //  Mostrar grid de ponedoras
+            return GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 1,
+                childAspectRatio: 1.5,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+              ),
               itemCount: ponedeVM.ponedoras.length,
               itemBuilder: (context, index) {
                 final ponedora = ponedeVM.ponedoras[index];
-                return ListTile(
-                  title: Text(
-                    ponedora.nombre,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black87,
-                    ),
+                return Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  subtitle: Text(
-                    '🐔 Gallinas: ${ponedora.cantidadGallinas}\n'
-                    '📅 Fecha de inicio: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(ponedora.fechaInicio))}\n'
-                    '💰 Precio unitario: \$${ponedora.precioUnitario.toStringAsFixed(2)} c/u\n'
-                    '💵 Precio total: \$${(ponedora.cantidadGallinas * ponedora.precioUnitario).toStringAsFixed(2)}\n'
-                    '🥚 Edad: ${ponedora.edadSemanas} semanas\n'
-                    'Estado: ${ponedora.estado == 0 ? '🔴 Inactivo' : '🟢 Activo'}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  onLongPress: () {
-                    if (ponedora.estado == 1) {
-                      // Alerta de lote activo
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetallePonedora(loteId: ponedora.id!),
+                        ),
+                      );
+                    },
+                    onLongPress: () {
+                      if (ponedora.estado == 1) {
+                        // Alerta de lote activo
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              backgroundColor: Colors.red.shade50,
+                              title: Column(
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: Colors.red,
+                                    size: 48,
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'No se puede eliminar',
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Este lote de ponedoras está activo y no puede ser eliminado.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.red.shade700,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Para eliminar el lote, primero debe estar inactivo.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.red.shade400,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.red.shade100,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    child: Text(
+                                      'Entendido',
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      } else {
+                        // Alerta de confirmación de eliminación
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) => AlertDialog(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -75,13 +208,13 @@ class VistaPonedoras extends StatelessWidget {
                             title: Column(
                               children: [
                                 Icon(
-                                  Icons.error_outline,
-                                  color: Colors.red,
+                                  Icons.warning_amber,
+                                  color: Colors.orange,
                                   size: 48,
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  'No se puede eliminar',
+                                  'Confirmar Eliminación',
                                   style: TextStyle(
                                     color: Colors.red.shade700,
                                     fontWeight: FontWeight.bold,
@@ -93,7 +226,7 @@ class VistaPonedoras extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Este lote de ponedoras está activo y no puede ser eliminado.',
+                                  '¿Estás seguro de eliminar el lote "${ponedora.nombre}"?',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 16,
@@ -102,7 +235,7 @@ class VistaPonedoras extends StatelessWidget {
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  'Para eliminar el lote, primero debe estar inactivo.',
+                                  'Esta acción no se puede deshacer.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 14,
@@ -115,6 +248,31 @@ class VistaPonedoras extends StatelessWidget {
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
                                 style: TextButton.styleFrom(
+                                  backgroundColor: Colors.grey.shade200,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  child: Text(
+                                    'Cancelar',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  ponedeVM.eliminarPonedora(ponedora.id!);
+                                  Navigator.pop(context);
+                                },
+                                style: TextButton.styleFrom(
                                   backgroundColor: Colors.red.shade100,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -126,7 +284,7 @@ class VistaPonedoras extends StatelessWidget {
                                     vertical: 8,
                                   ),
                                   child: Text(
-                                    'Entendido',
+                                    'Eliminar',
                                     style: TextStyle(
                                       color: Colors.red.shade700,
                                       fontWeight: FontWeight.bold,
@@ -135,131 +293,69 @@ class VistaPonedoras extends StatelessWidget {
                                 ),
                               ),
                             ],
-                          );
-                        },
-                      );
-                    } else {
-                      // Alerta de confirmación de eliminación - VERSIÓN CORREGIDA
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) => AlertDialog(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          backgroundColor: Colors.red.shade50,
-                          title: Column(
-                            children: [
-                              Icon(
-                                Icons.warning_amber,
-                                color: Colors.orange,
-                                size: 48,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Confirmar Eliminación',
-                                style: TextStyle(
-                                  color: Colors.red.shade700,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
                           ),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '¿Estás seguro de eliminar el lote "${ponedora.nombre}"?',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.red.shade700,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Esta acción no se puede deshacer.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.red.shade400,
-                                ),
-                              ),
-                            ],
+                        );
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ponedora.nombre,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black87,
+                            ),
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: TextButton.styleFrom(
-                                backgroundColor: Colors.grey.shade200,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                child: Text(
-                                  'Cancelar',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade700,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '🐔 Gallinas: ${ponedora.cantidadGallinas}\n'
+                            '📅 Fecha de inicio: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(ponedora.fechaInicio))}\n'
+                            '💰 Precio unitario: \$${ponedora.precioUnitario.toStringAsFixed(2)} c/u\n'
+                            '💵 Precio total: \$${(ponedora.cantidadGallinas * ponedora.precioUnitario).toStringAsFixed(2)}\n'
+                            '🥚 Edad: ${ponedora.edadSemanas} semanas\n'
+                            'Estado: ${ponedora.estado == 0 ? '🔴 Inactivo' : '🟢 Activo'}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
                             ),
-                            TextButton(
-                              onPressed: () {
-                                ponedeVM.eliminarPonedora(ponedora.id!);
-                                Navigator.pop(context);
-                              },
-                              style: TextButton.styleFrom(
-                                backgroundColor: Colors.red.shade100,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                child: Text(
-                                  'Eliminar',
-                                  style: TextStyle(
-                                    color: Colors.red.shade700,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                  },
-                  // OnTap para ver detalle
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetallePonedora(loteId: ponedora.id!),
+                          ),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 );
               },
             );
           },
         ),
         floatingActionButton: FloatingActionButton.extended(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           backgroundColor: Colors.yellow.shade200,
           elevation: 4,
           onPressed: () {
             showDialog(
               context: context,
-              builder: (BuildContext context) => AgregarPonederasDialog(
-                onAgregar: (ponedora) {
-                  Provider.of<PonederasViewModel>(
-                    context,
-                    listen: false,
-                  ).agregarPonedora(ponedora);
-                },
-              ),
+              builder:
+                  (BuildContext context) => AgregarPonederasDialog(
+                    onAgregar: (ponedora) {
+                      Provider.of<PonederasViewModel>(
+                        context,
+                        listen: false,
+                      ).agregarPonedora(ponedora);
+                    },
+                    cantidadLotesExistentes:
+                        Provider.of<PonederasViewModel>(
+                          context,
+                          listen: false,
+                        ).ponedoras.length, // ← AGREGAR ESTA LÍNEA
+                  ),
             );
           },
           icon: const Icon(
