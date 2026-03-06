@@ -43,6 +43,29 @@ class _PesoGraficaState extends State<PesoGrafica> {
     }
   }
 
+  // Obtener fechas únicas ordenadas
+  List<String> _obtenerFechasUnicas(List<RegistroPeso> registros) {
+    final fechasSet = <String>{};
+    for (var registro in registros) {
+      fechasSet.add(registro.fecha);
+    }
+    final fechas = fechasSet.toList();
+    fechas.sort();
+    return fechas;
+  }
+
+  // Agrupar registros por fecha para calcular promedios
+  Map<String, List<RegistroPeso>> _agruparPorFecha(List<RegistroPeso> registros) {
+    final agrupados = <String, List<RegistroPeso>>{};
+    for (var registro in registros) {
+      if (!agrupados.containsKey(registro.fecha)) {
+        agrupados[registro.fecha] = [];
+      }
+      agrupados[registro.fecha]!.add(registro);
+    }
+    return agrupados;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Usar registros actualizados
@@ -76,12 +99,27 @@ class _PesoGraficaState extends State<PesoGrafica> {
       );
     }
 
-    final registrosOrdenados = [...registros]..sort((a, b) => a.fecha.compareTo(b.fecha));
+    // Obtener fechas únicas y agrupar registros por fecha
+    final fechasUnicas = _obtenerFechasUnicas(registros);
+    final registrosPorFecha = _agruparPorFecha(registros);
+    
+    // Crear lista ordenada de registros con pesos promediados por día
+    final registrosPromediados = fechasUnicas.map((fecha) {
+      final registrosDia = registrosPorFecha[fecha]!;
+      final pesoPromedio = registrosDia.fold<double>(0, (sum, r) => sum + r.pesoPromedio) / registrosDia.length;
+      final primero = registrosDia.first;
+      return RegistroPeso(
+        id: primero.id,
+        lotesId: primero.lotesId,
+        fecha: fecha,
+        pesoPromedio: pesoPromedio,
+      );
+    }).toList();
 
     // Calcular máximo entre peso real y teórico de forma más robusta
     double maxY = 0;
-    if (registrosOrdenados.isNotEmpty) {
-      for (var registro in registrosOrdenados) {
+    if (registrosPromediados.isNotEmpty) {
+      for (var registro in registrosPromediados) {
         final pesoReal = registro.pesoPromedio;
         final fechaRegistro = DateTime.parse(registro.fecha);
         final pesoTeoricoValor = widget.pesoTeorico(fechaRegistro);
@@ -90,11 +128,38 @@ class _PesoGraficaState extends State<PesoGrafica> {
       maxY = (maxY * 1.1).ceilToDouble(); // Agregar 10% de margen
     }
 
-    // Calcular estadísticas
-    final ultimoPesoReal = registrosOrdenados.last.pesoPromedio;
-    final ultimoPesoTeorico = widget.pesoTeorico(DateTime.parse(registrosOrdenados.last.fecha));
+    // Calcular estadísticas completas
+    final pesos = registrosPromediados.map((r) => r.pesoPromedio).toList();
+    final ultimoPesoReal = registrosPromediados.last.pesoPromedio;
+    final primerPesoReal = registrosPromediados.first.pesoPromedio;
+    final pesoMax = pesos.reduce((a, b) => a > b ? a : b);
+    final pesoMin = pesos.reduce((a, b) => a < b ? a : b);
+    final pesoPromedio = pesos.fold<double>(0, (sum, p) => sum + p) / pesos.length;
+    
+    // Ganancia total y velocidad de crecimiento
+    final gananciaTotalPeso = ultimoPesoReal - primerPesoReal;
+    final diasTranscurridos = registrosPromediados.length;
+    final velocidadCrecimiento = diasTranscurridos > 1 ? gananciaTotalPeso / diasTranscurridos : 0;
+    
+    // Últimas estadísticas teóricas
+    final ultimoPesoTeorico = widget.pesoTeorico(DateTime.parse(registrosPromediados.last.fecha));
+    final primerPesoTeorico = widget.pesoTeorico(DateTime.parse(registrosPromediados.first.fecha));
     final diferencia = ultimoPesoReal - ultimoPesoTeorico;
     final porcentajeDiferencia = ultimoPesoTeorico > 0 ? (diferencia / ultimoPesoTeorico * 100) : 0;
+    
+    // Desviaciones mejores y peores
+    double mejorDesviacion = double.negativeInfinity;
+    double peorDesviacion = double.infinity;
+    for (var registro in registrosPromediados) {
+      final fechaReg = DateTime.parse(registro.fecha);
+      final pesoTeoVal = widget.pesoTeorico(fechaReg);
+      final desv = ((registro.pesoPromedio - pesoTeoVal) / pesoTeoVal * 100);
+      if (desv > mejorDesviacion) mejorDesviacion = desv;
+      if (desv < peorDesviacion) peorDesviacion = desv;
+    }
+    
+    // Eficiencia de engorde
+    final eficienciaEngorde = ultimoPesoTeorico > 0 ? (ultimoPesoReal / ultimoPesoTeorico) * 100 : 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -138,7 +203,7 @@ class _PesoGraficaState extends State<PesoGrafica> {
                     show: true,
                     drawVerticalLine: true,
                     horizontalInterval: maxY > 5 ? 1 : 0.5,
-                    verticalInterval: registrosOrdenados.length > 10 ? (registrosOrdenados.length / 5).ceilToDouble() : 1,
+                    verticalInterval: registrosPromediados.length > 10 ? (registrosPromediados.length / 5).ceilToDouble() : 1,
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
                         color: Colors.grey.shade300,
@@ -160,10 +225,10 @@ class _PesoGraficaState extends State<PesoGrafica> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 30,
-                        interval: registrosOrdenados.length > 10 ? (registrosOrdenados.length / 5).ceilToDouble() : 1,
+                        interval: registrosPromediados.length > 10 ? (registrosPromediados.length / 5).ceilToDouble() : 1,
                         getTitlesWidget: (value, meta) {
-                          if (value.toInt() >= 0 && value.toInt() < registrosOrdenados.length) {
-                            final fecha = DateTime.parse(registrosOrdenados[value.toInt()].fecha);
+                          if (value.toInt() >= 0 && value.toInt() < registrosPromediados.length) {
+                            final fecha = DateTime.parse(registrosPromediados[value.toInt()].fecha);
                             return Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text(
@@ -207,17 +272,17 @@ class _PesoGraficaState extends State<PesoGrafica> {
                     ),
                   ),
                   minX: 0,
-                  maxX: registrosOrdenados.length > 1 ? registrosOrdenados.length.toDouble() - 1 : 1,
+                  maxX: registrosPromediados.length > 1 ? registrosPromediados.length.toDouble() - 1 : 1,
                   minY: 0,
                   maxY: maxY,
                   lineBarsData: [
                     // Línea de peso real
                     LineChartBarData(
                       spots: List.generate(
-                        registrosOrdenados.length,
+                        registrosPromediados.length,
                         (index) => FlSpot(
                           index.toDouble(),
-                          registrosOrdenados[index].pesoPromedio,
+                          registrosPromediados[index].pesoPromedio,
                         ),
                       ),
                       isCurved: true,
@@ -256,10 +321,10 @@ class _PesoGraficaState extends State<PesoGrafica> {
                     // Línea de peso teórico
                     LineChartBarData(
                       spots: List.generate(
-                        registrosOrdenados.length,
+                        registrosPromediados.length,
                         (index) => FlSpot(
                           index.toDouble(),
-                          widget.pesoTeorico(DateTime.parse(registrosOrdenados[index].fecha)),
+                          widget.pesoTeorico(DateTime.parse(registrosPromediados[index].fecha)),
                         ),
                       ),
                       isCurved: true,
@@ -317,26 +382,80 @@ class _PesoGraficaState extends State<PesoGrafica> {
                     Colors.blue.shade700,
                   ),
                   _buildStatItem(
+                    'Primer peso real:', 
+                    '${primerPesoReal.toStringAsFixed(2)} kg',
+                    Icons.trending_up,
+                    Colors.blue.shade400,
+                  ),
+                  _buildStatItem(
+                    'Ganancia de peso:', 
+                    '${gananciaTotalPeso.toStringAsFixed(2)} kg',
+                    Icons.trending_up,
+                    gananciaTotalPeso >= 0 ? Colors.green.shade600 : Colors.red.shade600,
+                  ),
+                  _buildStatItem(
+                    'Velocidad de crecimiento:', 
+                    '${velocidadCrecimiento.toStringAsFixed(3)} kg/día',
+                    Icons.speed,
+                    Colors.blue.shade600,
+                  ),
+                  _buildStatItem(
+                    'Peso mínimo:', 
+                    '${pesoMin.toStringAsFixed(2)} kg',
+                    Icons.arrow_downward,
+                    Colors.orange.shade600,
+                  ),
+                  _buildStatItem(
+                    'Peso máximo:', 
+                    '${pesoMax.toStringAsFixed(2)} kg',
+                    Icons.arrow_upward,
+                    Colors.green.shade600,
+                  ),
+                  _buildStatItem(
+                    'Peso promedio:', 
+                    '${pesoPromedio.toStringAsFixed(2)} kg',
+                    Icons.bar_chart,
+                    Colors.blue.shade600,
+                  ),
+                  _buildStatItem(
                     'Último peso teórico:', 
                     '${ultimoPesoTeorico.toStringAsFixed(2)} kg',
                     Icons.timeline,
                     Colors.orange.shade600,
                   ),
                   _buildStatItem(
-                    'Diferencia:', 
+                    'Diferencia (actual):', 
                     '${diferencia.toStringAsFixed(2)} kg',
                     Icons.compare_arrows,
                     diferencia >= 0 ? Colors.green.shade600 : Colors.red.shade600,
                   ),
                   _buildStatItem(
-                    'Desviación:', 
+                    'Desviación actual:', 
                     '${porcentajeDiferencia.toStringAsFixed(1)}%',
                     Icons.percent,
                     porcentajeDiferencia.abs() > 10 ? Colors.red.shade600 : Colors.green.shade600,
                   ),
                   _buildStatItem(
-                    'Total de registros:', 
-                    '${registrosOrdenados.length} días',
+                    'Mejor desviación:', 
+                    '${mejorDesviacion.toStringAsFixed(1)}%',
+                    Icons.trending_up,
+                    Colors.green.shade600,
+                  ),
+                  _buildStatItem(
+                    'Peor desviación:', 
+                    '${peorDesviacion.toStringAsFixed(1)}%',
+                    Icons.trending_down,
+                    Colors.red.shade600,
+                  ),
+                  _buildStatItem(
+                    'Eficiencia de engorde:', 
+                    '${eficienciaEngorde.toStringAsFixed(1)}%',
+                    Icons.check_circle,
+                    eficienciaEngorde >= 100 ? Colors.green.shade600 : Colors.orange.shade600,
+                  ),
+                  _buildStatItem(
+                    'Días de registro:', 
+                    '$diasTranscurridos días',
                     Icons.calendar_today,
                     Colors.grey.shade700,
                   ),
