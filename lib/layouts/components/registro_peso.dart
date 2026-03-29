@@ -112,18 +112,18 @@ import 'package:intl/intl.dart';
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.blue.shade900,
+              color: const Color.fromARGB(255, 161, 80, 13),
             ),
           ),
           SizedBox(height: 16),
           TextField(
             controller: pesoController,
             decoration: InputDecoration(
-              labelText: 'Nuevo peso (kg)',
+              labelText: 'Peso real (kg)',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              prefixIcon: Icon(Icons.scale, color: Colors.blue),
+              prefixIcon: Icon(Icons.scale, color: const Color.fromARGB(255, 16, 91, 153)),
               filled: true,
               fillColor: Colors.white,
             ),

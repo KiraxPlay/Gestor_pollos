@@ -4,6 +4,7 @@ import 'package:gestorgalpon_app/layouts/components/editar_insumo.dart';
 import 'package:gestorgalpon_app/layouts/components/nuevo_insumo.dart';
 import 'package:gestorgalpon_app/layouts/components/registro_peso.dart';
 import 'package:gestorgalpon_app/views/pesoGrafica.dart';
+import 'package:gestorgalpon_app/views/reportes/reporte_engorde_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:gestorgalpon_app/models/tipo_insumo.dart';
 import 'package:gestorgalpon_app/services/lote_service.dart';
@@ -200,7 +201,25 @@ class _LotesTableState extends State<LotesTable> {
             color: Colors.black,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Ver reporte',
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => ReporteEngordeScreen(
+                          loteId: widget.lote.id!, // campo de Lotes
+                          nombreLote: widget.lote.nombre, // campo de Lotes
+                        ),
+                  ),
+                ),
+          ),
+        ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

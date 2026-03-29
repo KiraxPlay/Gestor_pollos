@@ -4,7 +4,7 @@ import 'package:gestorgalpon_app/services/db_service.dart';
 import 'package:gestorgalpon_app/services/connectivity_service.dart';
 import 'package:gestorgalpon_app/viewmodels/ponedoras/ponedoras_viewmodel.dart';
 import 'package:gestorgalpon_app/viewmodels/ponedoras/registrohuevos.dart';
-import 'package:gestorgalpon_app/views/Home.dart';
+import 'package:gestorgalpon_app/views/auth/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.black,
         ),
       ),
-      home: const MenuImagen(),
+      home: const SplashScreen(),
     );
   }
 }

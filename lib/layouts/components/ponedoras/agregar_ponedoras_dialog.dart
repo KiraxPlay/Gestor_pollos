@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../models/ponedoras/ponedoras.dart';
 
 class AgregarPonederasDialog extends StatefulWidget {
   final Function(Ponedoras) onAgregar;
-  final int cantidadLotesExistentes; // ← AGREGAR ESTE PARÁMETRO
+  final int cantidadLotesExistentes;
 
   const AgregarPonederasDialog({
     super.key, 
     required this.onAgregar,
-    required this.cantidadLotesExistentes, // ← RECIBIR LA CANTIDAD
+    required this.cantidadLotesExistentes,
   });
 
   @override
@@ -16,180 +17,256 @@ class AgregarPonederasDialog extends StatefulWidget {
 }
 
 class _AgregarPonederasDialogState extends State<AgregarPonederasDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nombreCtrl = TextEditingController();
   final _cantidadCtrl = TextEditingController();
   final _precioCtrl = TextEditingController();
-  DateTime _fechaInicio = DateTime.now();
+  String fechaInicio = '';
 
   @override
   void initState() {
     super.initState();
-    // Estableciendo el nombre automaticamente de ponedoras
-    _nombreCtrl.text = 'Ponedoras ${widget.cantidadLotesExistentes + 1}';
+    fechaInicio = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  }
+
+  @override
+  void dispose() {
+    _cantidadCtrl.dispose();
+    _precioCtrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Row(
+      backgroundColor: Colors.orange.shade50,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      title: Column(
         children: [
-          Icon(Icons.egg, color: Colors.orange),
-          SizedBox(width: 8),
-          Text('Agregar Ponedoras'),
+          Image.asset(
+            'assets/images/saved.png',
+            height: 80,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Agregar Nuevo Lote de Ponedoras',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
       content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              //  CAMPO DE NOMBRE AUTOMÁTICO PERO EDITABLE
-              TextFormField(
-                controller: _nombreCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Ponedoras',
-                  prefixIcon: Icon(Icons.badge),
-                ),
-                validator: (v) => v!.isEmpty ? 'Requerido' : null,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              enabled: false,
+              decoration: InputDecoration(
+                labelText: 'Nombre del Lote',
+                hintText: 'Ponedoras ${widget.cantidadLotesExistentes + 1}',
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _cantidadCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Cantidad de gallinas',
-                  prefixIcon: Icon(Icons.agriculture),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (v) {
-                  if (v!.isEmpty) return 'Requerido';
-                  if (int.tryParse(v) == null) return 'Número inválido';
-                  if (int.parse(v) <= 0) return 'Debe ser mayor a 0';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _precioCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Precio unitario (\$)',
-                  prefixIcon: Icon(Icons.attach_money),
-                ),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (v) {
-                  if (v!.isEmpty) return 'Requerido';
-                  if (double.tryParse(v) == null) return 'Número inválido';
-                  if (double.parse(v) <= 0) return 'Debe ser mayor a 0';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              // 🗓️ SELECTOR DE FECHA MEJORADO
-              InkWell(
-                onTap: _seleccionarFecha,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha de inicio',
-                    prefixIcon: Icon(Icons.calendar_today),
-                    border: OutlineInputBorder(),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${_fechaInicio.day}/${_fechaInicio.month}/${_fechaInicio.year}',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              //  INFORMACIÓN ADICIONAL
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.orange.shade700, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'El nombre se genera automáticamente, pero puedes cambiarlo',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange.shade800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            _buildCantidadGallinasField(),
+            const SizedBox(height: 12),
+            _buildFechaField(),
+            const SizedBox(height: 12),
+            _buildPrecioUnitarioField(),
+            const SizedBox(height: 12),
+            _buildDisabledFields(),
+          ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.grey.shade700,
-          ),
+          style: TextButton.styleFrom(foregroundColor: Colors.red.shade600),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: _agregarPonedora,
+          onPressed: () => _guardarPonedora(context),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orange.shade600,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Agregar Lote'),
+          child: const Text('Guardar'),
         ),
       ],
     );
   }
 
-  Future<void> _seleccionarFecha() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _fechaInicio,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+  Widget _buildCantidadGallinasField() {
+    return TextField(
+      controller: _cantidadCtrl,
+      decoration: const InputDecoration(
+        labelText: 'Cantidad de Gallinas',
+        hintText: 'Ingrese la cantidad',
+        prefixIcon: Icon(Icons.agriculture),
+        border: OutlineInputBorder(),
+      ),
+      keyboardType: TextInputType.number,
     );
-    if (date != null) {
-      setState(() => _fechaInicio = date);
-    }
   }
 
-  void _agregarPonedora() {
-    if (_formKey.currentState!.validate()) {
+  Widget _buildFechaField() {
+    return InkWell(
+      onTap: () async {
+        final DateTime? picked = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now(),
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now().add(const Duration(days: 1)),
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: ColorScheme.light(
+                  primary: Colors.orange.shade600,
+                  onPrimary: Colors.white,
+                  surface: Colors.orange.shade50,
+                ),
+                dialogBackgroundColor: Colors.orange.shade50,
+              ),
+              child: child!,
+            );
+          },
+        );
+
+        if (picked != null) {
+          setState(() {
+            fechaInicio = DateFormat('yyyy-MM-dd').format(picked);
+          });
+        }
+      },
+      child: AbsorbPointer(
+        child: TextField(
+          controller: TextEditingController(text: fechaInicio),
+          decoration: const InputDecoration(
+            labelText: 'Fecha de Inicio',
+            hintText: 'Seleccione la fecha',
+            prefixIcon: Icon(Icons.calendar_today),
+            border: OutlineInputBorder(),
+            suffixIcon: Icon(Icons.arrow_drop_down),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrecioUnitarioField() {
+    return TextField(
+      controller: _precioCtrl,
+      decoration: const InputDecoration(
+        labelText: 'Precio Unitario',
+        hintText: 'Ingrese el precio unitario',
+        prefixIcon: Icon(Icons.attach_money),
+        border: OutlineInputBorder(),
+      ),
+      keyboardType: TextInputType.number,
+    );
+  }
+
+  Widget _buildDisabledFields() {
+    return Column(
+      children: [
+        const TextField(
+          enabled: false,
+          decoration: InputDecoration(
+            labelText: 'Cantidad de Muertos',
+            hintText: '0',
+          ),
+        ),
+        const SizedBox(height: 12),
+        const TextField(
+          enabled: false,
+          decoration: InputDecoration(
+            labelText: 'Estado',
+            hintText: 'Desactivado',
+          ),
+        ),
+        const SizedBox(height: 12),
+        // INFORMACIÓN ADICIONAL
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.yellow.shade100,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange.shade200),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info, color: Colors.orange.shade700, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'El nombre se genera automáticamente, pero puedes cambiarlo',
+                  style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _guardarPonedora(BuildContext context) async {
+    final cantidad = int.tryParse(_cantidadCtrl.text);
+    final precio = double.tryParse(_precioCtrl.text);
+
+    if (cantidad == null || cantidad <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingrese una cantidad válida de gallinas')),
+      );
+      return;
+    }
+
+    if (precio == null || precio <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingrese un precio válido')),
+      );
+      return;
+    }
+
+    try {
       final nuevaPonedora = Ponedoras(
-        id: 0, // ← AGREGAR ID TEMPORAL
-        nombre: _nombreCtrl.text.trim(),
-        cantidadGallinas: int.parse(_cantidadCtrl.text),
-        precioUnitario: double.parse(_precioCtrl.text),
-        fechaInicio: _fechaInicio.toIso8601String().split('T')[0],
-        cantidadMuerto: 0, // ← VALOR POR DEFECTO
-        estado: 0, // ← VALOR POR DEFECTO
-        edadSemanas: 0, // ← VALOR POR DEFECTO
+        nombre: 'Ponedoras ${widget.cantidadLotesExistentes + 1}',
+        cantidadGallinas: cantidad,
+        precioUnitario: precio,
+        fechaInicio: fechaInicio,
+        cantidadMuerto: 0,
+        estado: 0,
+        edadSemanas: 0,
+        muertosSemanales: 0,
       );
 
       widget.onAgregar(nuevaPonedora);
-      Navigator.pop(context);
-    }
-  }
 
-  @override
-  void dispose() {
-    _nombreCtrl.dispose();
-    _cantidadCtrl.dispose();
-    _precioCtrl.dispose();
-    super.dispose();
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Row(
+              children: const [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Lote de ponedoras creado exitosamente',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.orange.shade600,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
   }
 }

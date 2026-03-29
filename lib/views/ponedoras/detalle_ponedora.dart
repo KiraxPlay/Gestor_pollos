@@ -8,6 +8,8 @@ import 'package:gestorgalpon_app/views/ponedoras/huevos_grafica.dart';
 import 'package:gestorgalpon_app/models/ponedoras/insumos_ponedoras.dart';
 import 'package:gestorgalpon_app/services/db_service.dart';
 import 'package:gestorgalpon_app/services/sync_service.dart';
+import 'package:gestorgalpon_app/views/reportes/reporte_engorde_screen.dart';
+import 'package:gestorgalpon_app/views/reportes/reporte_ponedora_screen.dart';
 import 'package:intl/intl.dart';
 import '../../models/ponedoras/ponedoras.dart';
 import '../../models/ponedoras/registrohuevos.dart';
@@ -72,38 +74,43 @@ class _DetallePonedoraState extends State<DetallePonedora> {
     }
   }
 
-Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
-  try {
-    await InsumosPonedorasService.eliminarInsumoPonedora(insumo.id!);
-    _cargarDatos(); // Recarga los datos después de eliminar
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error al eliminar insumo: $e')),
-    );
+  Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
+    try {
+      await InsumosPonedorasService.eliminarInsumoPonedora(insumo.id!);
+      _cargarDatos(); // Recarga los datos después de eliminar
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al eliminar insumo: $e')));
+    }
   }
-}
 
   // Función para confirmar eliminación de insumo
   Future<void> _confirmarEliminarInsumo(InsumoPonedora insumo) async {
     final confirmar = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        backgroundColor: Colors.red.shade50,
-        title: const Text('Confirmar eliminación'),
-        content: Text('¿Está seguro que desea eliminar el insumo ${insumo.nombre}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            backgroundColor: Colors.red.shade50,
+            title: const Text('Confirmar eliminación'),
+            content: Text(
+              '¿Está seguro que desea eliminar el insumo ${insumo.nombre}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Eliminar'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
     );
 
     if (confirmar == true) {
@@ -117,9 +124,8 @@ Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
     try {
       final cargadosRegistros =
           await RegistroHuevosService.obtenerRegistrosPorLote(widget.loteId);
-      final cargadosInsumos = await InsumosPonedorasService.obtenerInsumosPorLote(
-        widget.loteId,
-      );
+      final cargadosInsumos =
+          await InsumosPonedorasService.obtenerInsumosPorLote(widget.loteId);
       final ponedoraActualizada = await PonederasService.obtenerPonederaPorId(
         widget.loteId,
       );
@@ -134,9 +140,9 @@ Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
       print('Error cargando datos: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error cargando datos: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error cargando datos: $e')));
       }
     }
   }
@@ -246,9 +252,7 @@ Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
     // 🔄 Mostrar loading si los datos aún no han cargado
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Cargando...'),
-        ),
+        appBar: AppBar(title: const Text('Cargando...')),
         body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -277,6 +281,29 @@ Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
             color: Colors.black,
           ),
         ),
+        actions:
+            _isLoading
+                ? []
+                : [
+                  IconButton(
+                    icon: const Icon(Icons.bar_chart),
+                    tooltip: 'Ver reporte',
+                    onPressed:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => ReportePonedoraScreen(
+                                  loteId:
+                                      ponedoraActual.id!, // campo de Ponedoras
+                                  nombreLote:
+                                      ponedoraActual
+                                          .nombre, // campo de Ponedoras
+                                ),
+                          ),
+                        ),
+                  ),
+                ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -462,7 +489,8 @@ Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
                                       Icons.delete,
                                       color: Colors.red,
                                     ),
-                                    onPressed: () => _confirmarEliminarInsumo(insumo),
+                                    onPressed:
+                                        () => _confirmarEliminarInsumo(insumo),
                                   ),
                                 ],
                               ),
@@ -697,7 +725,7 @@ Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
         }
 
         final operacionesPendientes = snapshot.data ?? [];
-        
+
         if (operacionesPendientes.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(12),
@@ -774,7 +802,7 @@ Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
   /// 📋 Construir lista de operaciones pendientes
   List<Widget> _buildOperacionesList(List<Map<String, dynamic>> operaciones) {
     final Map<String, int> contadores = {};
-    
+
     for (var op in operaciones) {
       final key = '${op['operation']} - ${op['table_name']}';
       contadores[key] = (contadores[key] ?? 0) + 1;
@@ -861,7 +889,7 @@ Future<void> _eliminarInsumo(InsumoPonedora insumo) async {
       );
 
       await SyncService.syncAllPendingOperations();
-      
+
       // Recargar datos después de sincronizar
       await _cargarDatos();
 

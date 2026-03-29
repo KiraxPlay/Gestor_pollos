@@ -29,7 +29,7 @@ class DBService {
   }
 
   static Future<void> _createTables(Database db, int version) async {
-    print('🔧 Creando tablas (versión $version)...');
+    print(' Creando tablas (versión $version)...');
 
     // Tabla Lotes (engorde)
     await db.execute('''

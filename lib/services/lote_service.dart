@@ -204,10 +204,10 @@ class LoteService {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
 
-        print('✅ Lote sincronizado en segundo plano');
+        print(' Lote sincronizado en segundo plano');
       }
     } catch (e) {
-      print('⚠️ Error en sincronización en segundo plano: $e');
+      print(' Error en sincronización en segundo plano: $e');
     }
   }
 

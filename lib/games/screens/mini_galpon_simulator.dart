@@ -524,7 +524,7 @@ class _GameOverButtons extends StatelessWidget {
               backgroundColor: Colors.green,
             ),
             child: const Text(
-              '🔄 Jugar de Nuevo',
+              ' Jugar de Nuevo',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

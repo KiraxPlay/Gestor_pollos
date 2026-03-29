@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:gestorgalpon_app/services/auth_service.dart';
+import 'package:gestorgalpon_app/views/auth/login_screen.dart';
 import 'vista_galpones.dart';
 import 'ponedoras/vista_ponedoras.dart';
-import 'package:gestorgalpon_app/games/screens/mini_galpon_simulator.dart'; 
+import 'package:gestorgalpon_app/games/screens/mini_galpon_simulator.dart';
 
 class MenuImagen extends StatelessWidget {
   const MenuImagen({super.key});
   static const String pollo = 'assets/images/carga2_galpones.png';
-  static const String gallina = 'assets/images/ponedoras.png'; // Asegúrate de tener esta imagen
+  static const String gallina =
+      'assets/images/ponedoras.png'; // Asegúrate de tener esta imagen
 
   @override
   Widget build(BuildContext context) {
@@ -14,13 +17,31 @@ class MenuImagen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Bienvenido a SmartGalpon',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Colors.yellow.shade300,
+        actions: [
+          PopupMenuButton(
+            onSelected: (value) async {
+              if (value == 'logout') {
+                await AuthService.logout();
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              }
+            },
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'logout',
+                    child: Text('Cerrar sesión'),
+                  ),
+                ],
+          ),
+        ],
       ),
       backgroundColor: Colors.yellow,
       body: Container(
@@ -43,9 +64,7 @@ class MenuImagen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const VistaLotes(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const VistaLotes()),
                 );
               },
               child: _buildMenuCard(
@@ -112,14 +131,14 @@ class MenuImagen extends StatelessWidget {
                     const SizedBox(height: 10),
                     const Text(
                       'SimuGalpon',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.white70),
                     ),
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -150,9 +169,7 @@ class MenuImagen extends StatelessWidget {
   }) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Column(
         children: [
           Expanded(
@@ -170,10 +187,7 @@ class MenuImagen extends StatelessWidget {
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
                 ),
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.asset(imagePath, fit: BoxFit.cover),
               ),
             ),
           ),
@@ -197,10 +211,7 @@ class MenuImagen extends StatelessWidget {
                   Text(
                     subtitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                 ],
               ),

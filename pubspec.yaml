@@ -28,6 +28,7 @@ dependencies:
   http: ^1.5.0
   connectivity_plus: ^4.0.2
   synchronized: ^3.0.0
+  open_filex: ^4.3.4
 
 dev_dependencies:
   flutter_test:
@@ -49,6 +50,6 @@ flutter:
    - assets/images/ponedoras.png
    - assets/images/ponedoras2.png
    - assets/images/no_huevos.png
+   - assets/images/smartGalpon_icon.png
 
- 
-
+   

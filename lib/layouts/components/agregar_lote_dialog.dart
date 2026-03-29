@@ -7,10 +7,7 @@ import 'package:provider/provider.dart';
 class AgregarLoteDialog extends StatefulWidget {
   final LoteViewModel loteVM;
 
-  const AgregarLoteDialog({
-    Key? key,
-    required this.loteVM,
-  }) : super(key: key);
+  const AgregarLoteDialog({Key? key, required this.loteVM}) : super(key: key);
 
   @override
   State<AgregarLoteDialog> createState() => _AgregarLoteDialogState();
@@ -37,9 +34,7 @@ class _AgregarLoteDialogState extends State<AgregarLoteDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: Colors.yellow.shade100,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Column(
         children: [
           Image.asset(
@@ -50,10 +45,7 @@ class _AgregarLoteDialogState extends State<AgregarLoteDialog> {
           const SizedBox(height: 8),
           const Text(
             'Agregar Nuevo Lote',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -66,6 +58,30 @@ class _AgregarLoteDialogState extends State<AgregarLoteDialog> {
               decoration: InputDecoration(
                 labelText: 'Nombre del Lote',
                 hintText: 'Lote ${widget.loteVM.lotes.length + 1}',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.yellow.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.orange.shade700, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'El nombre se genera automáticamente',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.shade800,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
@@ -82,9 +98,7 @@ class _AgregarLoteDialogState extends State<AgregarLoteDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.red.shade600,
-          ),
+          style: TextButton.styleFrom(foregroundColor: Colors.red.shade600),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
@@ -203,9 +217,9 @@ class _AgregarLoteDialogState extends State<AgregarLoteDialog> {
     }
 
     if (precioUnitario == null || precioUnitario <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingrese un precio válido')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ingrese un precio válido')));
       return;
     }
 
@@ -244,9 +258,9 @@ class _AgregarLoteDialogState extends State<AgregarLoteDialog> {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     }
   }
