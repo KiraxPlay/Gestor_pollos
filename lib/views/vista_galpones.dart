@@ -117,7 +117,7 @@ class VistaLotes extends StatelessWidget {
                                     context: context,
                                     builder: (BuildContext context) {
                                       return AlertDialog(
-                                        shape: RoundedRectangleBorder(
+                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(20),
                                         ),
                                         backgroundColor: Colors.red.shade50,

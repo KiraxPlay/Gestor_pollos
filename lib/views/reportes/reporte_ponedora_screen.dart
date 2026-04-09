@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:gestorgalpon_app/services/reporte_service.dart';
 import 'package:gestorgalpon_app/views/reportes/widgets_reporte.dart';
 
@@ -61,7 +62,18 @@ class _ReportePonedoraScreenState extends State<ReportePonedoraScreen> {
     setState(() => _exportando = true);
     try {
       final file = await ReporteService.descargarArchivo(widget.loteId, tipo);
-      await OpenFilex.open(file.path);
+      
+      if (kIsWeb) {
+        // En web, mostramos un mensaje de descarga
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Descargando reporte en formato $tipo...')),
+          );
+        }
+      } else {
+        // En Android/iOS, abrir con OpenFilex
+        if (file != null) await OpenFilex.open(file.path);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

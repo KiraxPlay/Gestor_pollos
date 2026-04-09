@@ -50,22 +50,32 @@ class PonederasService {
   }
 
   static Future<int> insertarPonedora(Ponedoras ponedora) async {
-    final db = await DBService.database;
-    final connectivity = ConnectivityService();
-
-    print('🔍 Insertando ponedora: ${ponedora.nombre}');
-    print('🔌 ¿Conectado? ${connectivity.isConnected}');
-
+    print('🔍 [Service] INICIO insertarPonedora()');
+    late final Database db;
+    
     try {
+      print('🔍 [Service] Obteniendo DBService.database...');
+      db = await DBService.database;
+      print('✅ [Service] DBService obtenido');
+      
+      print('🔍 [Service] Creando ConnectivityService...');
+      final connectivity = ConnectivityService();
+      print('✅ [Service] ConnectivityService creado');
+
+      print('🔍 [Service] Insertando ponedora: ${ponedora.nombre}');
+      print('🔌 [Service] ¿Conectado? ${connectivity.isConnected}');
+
       if (connectivity.isConnected) {
-        print('📡 Intentando crear ponedora en backend...');
-        final response = await ApiServicePonedoras.crearPonedora(ponedora.toJson());
-        print('✅ Respuesta backend: $response');
+        print('📡 [Service] Intentando crear ponedora en backend...');
+        final ponederaJson = ponedora.toJson();
+        print('📡 [Service] JSON a enviar: $ponederaJson');
+        final response = await ApiServicePonedoras.crearPonedora(ponederaJson);
+        print('✅ [Service] Respuesta backend: $response');
         
         if (response is Map<String, dynamic> && response['lote_id'] != null) {
           final id = response['lote_id'];
           final ponederaConId = ponedora.copyWith(id: id);
-          print('💾 Guardando en SQLite con ID: $id');
+          print('💾 [Service] Guardando en SQLite con ID: $id');
           return await db.insert(_tableName, ponederaConId.toJson(),
               conflictAlgorithm: ConflictAlgorithm.replace);
         }
@@ -74,10 +84,10 @@ class PonederasService {
             conflictAlgorithm: ConflictAlgorithm.replace);
         await SyncService.queueOperation(
             operation: 'INSERT', tableName: 'ponedoras', data: ponedora.toJson());
-        print('⚠️ Guardado localmente (sin ID del backend)');
+        print('⚠️ [Service] Guardado localmente (sin ID del backend)');
         return id;
       } else {
-        print('📴 Sin conexión, guardando localmente...');
+        print('📴 [Service] Sin conexión, guardando localmente...');
         final id = await db.insert(_tableName, ponedora.toJson(),
             conflictAlgorithm: ConflictAlgorithm.replace);
         await SyncService.queueOperation(

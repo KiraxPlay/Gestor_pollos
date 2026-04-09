@@ -260,7 +260,14 @@ class SyncService {
   ) async {
     try {
       if (operation == 'INSERT') {
-        await ApiServicePonedoras.crearPonedora(data);
+        // Filtrar solo los campos necesarios para crear una ponedora
+        final datosCorregidos = {
+          'nombre': data['nombre'],
+          'cantidad_gallinas': data['cantidad_gallinas'],
+          'precio_unitario': data['precio_unitario'],
+          'fecha_inicio': data['fecha_inicio'],
+        };
+        await ApiServicePonedoras.crearPonedora(datosCorregidos);
         return true;
       } else if (operation == 'DELETE') {
         if (data['id'] != null) {

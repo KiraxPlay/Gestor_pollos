@@ -2,20 +2,14 @@ import 'dart:convert';
 import '../api_client.dart'; // para el api_client para manejar el token automaticamente
 
 class ApiServicePonedoras {
-  static const String baseUrl =
-      'https://backend-gestor-pollos.onrender.com/api/ponedoras';
-
-  static const String obtenerPonedorasEndpoint = '$baseUrl/lotesPonedoras/';
-  static const String crearPonedoraEndpoint = '$baseUrl/crearLotePonedora/';
-  static const String agregarRegistroHuevoEndpoint = '$baseUrl/registroHuevos/';
-
+  static const String baseUrl = 'https://backend-gestor-pollos.onrender.com/api/ponedoras';
   // ──────────────────────────────────────────────
   //  LOTES PONEDORAS
   // ──────────────────────────────────────────────
 
   static Future<List<dynamic>> obtenerPonedoras() async {
     print('📤 Obteniendo ponedoras');
-    final res = await ApiClient.get(obtenerPonedorasEndpoint);
+    final res = await ApiClient.get('$baseUrl/lotesPonedoras/');
     print('📥 Respuesta obtenerPonedoras (${res.statusCode}): ${res.body}');
 
     if (res.statusCode == 200) {
@@ -29,9 +23,10 @@ class ApiServicePonedoras {
   }
 
   static Future<dynamic> crearPonedora(Map<String, dynamic> payload) async {
-    print('📤 Creando ponedora: $payload');
-    final res = await ApiClient.post(crearPonedoraEndpoint, payload);
-    print('📥 Respuesta crearPonedora (${res.statusCode}): ${res.body}');
+    print('📤 [ApiService] Creando ponedora: $payload');
+    print('📤 [ApiService] Llamando a ApiClient.post()...');
+    final res = await ApiClient.post('$baseUrl/crearLotePonedora/', payload);
+    print('📥 [ApiService] Respuesta crearPonedora (${res.statusCode}): ${res.body}');
 
     if (res.statusCode == 200 || res.statusCode == 201)
       return json.decode(res.body);
@@ -81,7 +76,7 @@ class ApiServicePonedoras {
       Map<String, dynamic> payload) async {
     print('📤 Agregando registro huevos: $payload');
     final res =
-        await ApiClient.post(agregarRegistroHuevoEndpoint, payload);
+        await ApiClient.post('$baseUrl/registroHuevos/', payload);
     print(
         '📥 Respuesta agregarRegistroHuevos (${res.statusCode}): ${res.body}');
 

@@ -1,4 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ConnectivityService {
   static final ConnectivityService _instance = ConnectivityService._internal();
@@ -19,21 +20,44 @@ class ConnectivityService {
   ConnectivityService._internal();
 
   Future<void> initialize() async {
-    final result = await _connectivity.checkConnectivity();
-    _isConnected = result == ConnectivityResult.wifi || 
-                   result == ConnectivityResult.mobile;
-    
-    onConnectivityChanged.listen((result) {
+    // En web, siempre asumimos que hay conexión
+    if (kIsWeb) {
+      _isConnected = true;
+      print('Web: Conectividad asumida como activa');
+      return;
+    }
+
+    try {
+      final result = await _connectivity.checkConnectivity();
       _isConnected = result == ConnectivityResult.wifi || 
                      result == ConnectivityResult.mobile;
-      print('Conectividad cambió: $_isConnected');
-    });
+      
+      onConnectivityChanged.listen((result) {
+        _isConnected = result == ConnectivityResult.wifi || 
+                       result == ConnectivityResult.mobile;
+        print('Conectividad cambió: $_isConnected');
+      });
+    } catch (e) {
+      print('Error inicializando conectividad: $e');
+      _isConnected = true; // Asumir conectado si falla
+    }
   }
 
   Future<bool> checkConnection() async {
-    final result = await _connectivity.checkConnectivity();
-    _isConnected = result == ConnectivityResult.wifi || 
-                   result == ConnectivityResult.mobile;
-    return _isConnected;
+    if (kIsWeb) {
+      return true; // En web siempre hay conexión
+    }
+
+    try {
+      final result = await _connectivity.checkConnectivity();
+      _isConnected = result == ConnectivityResult.wifi || 
+                     result == ConnectivityResult.mobile;
+      return _isConnected;
+    } catch (e) {
+      print('Error verificando conectividad: $e');
+      return true; // Asumir conectado si hay error
+    }
   }
-}
+ 
+
+  }

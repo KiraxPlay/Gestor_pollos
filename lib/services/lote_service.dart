@@ -1,23 +1,32 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/lotes.dart';
 import 'db_service.dart';
 import 'connectivity_service.dart';
 import 'sync_service.dart';
 import 'api_service.dart';
-import 'dart:convert';
 
 class LoteService {
   static const String _tableName = 'Lotes';
 
+  // 🔥 OBTENER LOTES
   static Future<List<Lotes>> obtenerLotes() async {
     final connectivity = ConnectivityService();
+
+    // 🌐 WEB → SOLO API
+    if (kIsWeb) {
+      final datos = await ApiService.obtenerLotes();
+      return List<Lotes>.from(datos.map((item) => Lotes.fromJson(item)));
+    }
+
+    // 📱 MOBILE → SQLite + Sync
     final db = await DBService.database;
 
     try {
       if (connectivity.isConnected) {
-        final datosBackend = await ApiService.obtenerLotes();
+        final datos = await ApiService.obtenerLotes();
         final lotes = List<Lotes>.from(
-          datosBackend.map((item) => Lotes.fromJson(item)),
+          datos.map((item) => Lotes.fromJson(item)),
         );
 
         for (var lote in lotes) {
@@ -31,334 +40,237 @@ class LoteService {
         return lotes;
       } else {
         final data = await db.query(_tableName);
-        return List<Lotes>.from(data.map((item) => Lotes.fromJson(item)));
+        return data.map((e) => Lotes.fromJson(e)).toList();
       }
     } catch (e) {
       final data = await db.query(_tableName);
-      return List<Lotes>.from(data.map((item) => Lotes.fromJson(item)));
+      return data.map((e) => Lotes.fromJson(e)).toList();
     }
   }
 
+  // 🔥 INSERTAR LOTE
   static Future<int> insertarLote(Lotes lote) async {
-    final db = await DBService.database;
     final connectivity = ConnectivityService();
 
-    try {
-      if (connectivity.isConnected) {
-        final response = await ApiService.crearLote(lote.toJson());
-        // backend devuelve {"success": True, "lote": [ {...} ] }
-        if (response is Map<String, dynamic> && response['lote'] != null) {
-          final loteResp = response['lote'];
-          Map<String, dynamic> loteMap;
-          if (loteResp is List && loteResp.isNotEmpty) {
-            loteMap = Map<String, dynamic>.from(loteResp[0]);
-          } else if (loteResp is Map) {
-            loteMap = Map<String, dynamic>.from(loteResp);
-          } else {
-            loteMap = {};
-          }
+    // 🌐 WEB
+    if (kIsWeb) {
+      await ApiService.crearLote(lote.toJson());
+      return 1;
+    }
 
-          if (loteMap.isNotEmpty) {
-            final nuevoLote = Lotes.fromJson(loteMap);
-            return await db.insert(
-              _tableName,
-              nuevoLote.toJson(),
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-          }
-        }
+    final db = await DBService.database;
 
-        // Fallback: si backend respondió pero sin lote estructurado, insertar local con posible id retornado
-        if (response is Map<String, dynamic> && response['id'] != null) {
-          final loteConId = lote.copyWith(
-            id: int.tryParse(response['id'].toString()),
-          );
-          return await db.insert(
-            _tableName,
-            loteConId.toJson(),
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-
-        // Si no se puede parsear, insertar local y encolar
-        final id = await db.insert(
-          _tableName,
-          lote.toJson(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-        await SyncService.queueOperation(
-          operation: 'INSERT',
-          tableName: 'lotes',
-          data: lote.toJson(),
-        );
-        return id;
-      } else {
-        final id = await db.insert(
-          _tableName,
-          lote.toJson(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-        await SyncService.queueOperation(
-          operation: 'INSERT',
-          tableName: 'lotes',
-          data: lote.toJson(),
-        );
-        return id;
-      }
-    } catch (e) {
-      final id = await db.insert(
-        _tableName,
-        lote.toJson(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+    if (connectivity.isConnected) {
+      await ApiService.crearLote(lote.toJson());
+    } else {
       await SyncService.queueOperation(
         operation: 'INSERT',
         tableName: 'lotes',
         data: lote.toJson(),
       );
-      return id;
+    }
+
+    return await db.insert(
+      _tableName,
+      lote.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // 🔥 ELIMINAR
+  static Future<int> eliminarLote(int id) async {
+    final connectivity = ConnectivityService();
+
+    // 🌐 WEB
+    if (kIsWeb) {
+      await ApiService.eliminarLote(id);
+      return 1;
+    }
+
+    final db = await DBService.database;
+
+    if (connectivity.isConnected) {
+      await ApiService.eliminarLote(id);
+    } else {
+      await SyncService.queueOperation(
+        operation: 'DELETE',
+        tableName: 'lotes',
+        data: {'id': id},
+      );
+    }
+
+    return await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
+  }
+
+  // 🔥 ACTUALIZAR
+  static Future<int> actualizarLote(Lotes lote) async {
+    final connectivity = ConnectivityService();
+
+    // 🌐 WEB
+    if (kIsWeb) {
+      await ApiService.actualizarLote(lote.toJson());
+      return 1;
+    }
+
+    final db = await DBService.database;
+
+    await db.update(
+      _tableName,
+      lote.toJson(),
+      where: 'id = ?',
+      whereArgs: [lote.id],
+    );
+
+    if (connectivity.isConnected) {
+      await ApiService.actualizarLote(lote.toJson());
+    } else {
+      await SyncService.queueOperation(
+        operation: 'UPDATE',
+        tableName: 'lotes',
+        data: lote.toJson(),
+      );
+    }
+
+    return 1;
+  }
+
+  // 🔥 ACTUALIZAR MUERTOS
+  static Future<void> actualizarCantidadMuertos(
+    int id,
+    int nuevosMuertos,
+  ) async {
+    final connectivity = ConnectivityService();
+
+    // 🌐 WEB
+    if (kIsWeb) {
+      await ApiService.registrarMortalidad({
+        'lote_id': id,
+        'cantidad_muerta': nuevosMuertos,
+      });
+      return;
+    }
+
+    final db = await DBService.database;
+
+    await db.update(
+      _tableName,
+      {'cantidad_muertos': nuevosMuertos},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (connectivity.isConnected) {
+      await ApiService.registrarMortalidad({
+        'lote_id': id,
+        'cantidad_muerta': nuevosMuertos,
+      });
+    } else {
+      await SyncService.queueOperation(
+        operation: 'UPDATE_MORTALIDAD',
+        tableName: 'lotes',
+        data: {'lote_id': id, 'cantidad_muerta': nuevosMuertos},
+      );
     }
   }
 
   static Future<Lotes> obtenerLotePorId(int id) async {
-    final db = await DBService.database;
     final connectivity = ConnectivityService();
 
-    try {
-      // 📱 PRIMERO intentar obtener de BD local
-      final listaLocal = await db.query(
-        _tableName,
-        where: 'id = ?',
-        whereArgs: [id],
-        limit: 1,
-      );
-
-      if (listaLocal.isNotEmpty) {
-        final loteLocal = Lotes.fromJson(listaLocal.first);
-        print(
-          '✅ Lote obtenido de BD local - Muertos: ${loteLocal.cantidadMuertos}',
-        );
-
-        // Si hay conexión, sincronizar en segundo plano
-        if (await connectivity.isConnected) {
-          _sincronizarLoteEnSegundoPlano(id);
-        }
-
-        return loteLocal;
-      }
-
-      // Si no existe localmente y hay conexión, obtener del servidor
-      if (await connectivity.isConnected) {
-        final data = await ApiService.detalleLote(id);
-        if (data is Map<String, dynamic> && data['lote'] != null) {
-          final loteList = data['lote'];
-          Lotes lote;
-
-          if (loteList is List && loteList.isNotEmpty) {
-            lote = Lotes.fromJson(Map<String, dynamic>.from(loteList[0]));
-          } else if (loteList is Map) {
-            lote = Lotes.fromJson(Map<String, dynamic>.from(loteList));
-          } else {
-            throw Exception('Formato de lote inválido');
-          }
-
-          // Guardar en BD local
-          await db.insert(
-            _tableName,
-            lote.toJson(),
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-
-          return lote;
-        }
-        throw Exception('Respuesta inválida del backend para detalleLote');
-      }
-
-      throw Exception('Lote no encontrado localmente con id $id');
-    } catch (e) {
-      print('❌ Error en obtenerLotePorId: $e');
-      rethrow;
-    }
-  }
-
-  // Sincronización en segundo plano
-  static Future<void> _sincronizarLoteEnSegundoPlano(int id) async {
-    try {
+    // 🌐 WEB
+    if (kIsWeb) {
       final data = await ApiService.detalleLote(id);
-      if (data is Map<String, dynamic> && data['lote'] != null) {
-        final loteList = data['lote'];
+
+      if (data['lote'] != null) {
+        final loteData = data['lote'];
+
+        if (loteData is List && loteData.isNotEmpty) {
+          return Lotes.fromJson(Map<String, dynamic>.from(loteData[0]));
+        } else if (loteData is Map) {
+          return Lotes.fromJson(Map<String, dynamic>.from(loteData));
+        }
+      }
+
+      throw Exception('Lote no encontrado');
+    }
+
+    // 📱 MOBILE
+    final db = await DBService.database;
+
+    final local = await db.query(
+      _tableName,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (local.isNotEmpty) {
+      return Lotes.fromJson(local.first);
+    }
+
+    if (connectivity.isConnected) {
+      final data = await ApiService.detalleLote(id);
+
+      if (data['lote'] != null) {
+        final loteData = data['lote'];
+
         Lotes lote;
 
-        if (loteList is List && loteList.isNotEmpty) {
-          lote = Lotes.fromJson(Map<String, dynamic>.from(loteList[0]));
-        } else if (loteList is Map) {
-          lote = Lotes.fromJson(Map<String, dynamic>.from(loteList));
+        if (loteData is List && loteData.isNotEmpty) {
+          lote = Lotes.fromJson(Map<String, dynamic>.from(loteData[0]));
         } else {
-          return;
+          lote = Lotes.fromJson(Map<String, dynamic>.from(loteData));
         }
 
-        final db = await DBService.database;
         await db.insert(
           _tableName,
           lote.toJson(),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
 
-        print(' Lote sincronizado en segundo plano');
+        return lote;
       }
-    } catch (e) {
-      print(' Error en sincronización en segundo plano: $e');
     }
-  }
 
-  static Future<int> actualizarLote(Lotes lote) async {
-    final db = await DBService.database;
-    final connectivity = ConnectivityService();
-
-    try {
-      final rows = await db.update(
-        _tableName,
-        lote.toJson(),
-        where: 'id = ?',
-        whereArgs: [lote.id],
-      );
-      await SyncService.queueOperation(
-        operation: 'UPDATE',
-        tableName: 'lotes',
-        data: lote.toJson(),
-      );
-      if (connectivity.isConnected)
-        await SyncService.syncAllPendingOperations();
-      return rows;
-    } catch (e) {
-      await db.update(
-        _tableName,
-        lote.toJson(),
-        where: 'id = ?',
-        whereArgs: [lote.id],
-      );
-      await SyncService.queueOperation(
-        operation: 'UPDATE',
-        tableName: 'lotes',
-        data: lote.toJson(),
-      );
-      rethrow;
-    }
-  }
-
-  static Future<int> eliminarLote(int id) async {
-    final db = await DBService.database;
-    final connectivity = ConnectivityService();
-
-    try {
-      if (connectivity.isConnected) {
-        await ApiService.eliminarLote(id);
-      } else {
-        await SyncService.queueOperation(
-          operation: 'DELETE',
-          tableName: 'lotes',
-          data: {'id': id},
-        );
-      }
-      return await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
-    } catch (e) {
-      return await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
-    }
-  }
-
-  static Future<void> actualizarCantidadMuertos(
-    int id,
-    int nuevosMuertos,
-  ) async {
-    final db = await DBService.database;
-    final connectivity = ConnectivityService();
-
-    try {
-      await db.update(
-        _tableName,
-        {'cantidad_muertos': nuevosMuertos},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-      await SyncService.queueOperation(
-        operation: 'UPDATE',
-        tableName: 'lotes',
-        data: {'id': id, 'cantidad_muertos': nuevosMuertos},
-      );
-      if (connectivity.isConnected)
-        await SyncService.syncAllPendingOperations();
-    } catch (e) {
-      rethrow;
-    }
+    throw Exception('Lote no encontrado');
   }
 
   static Future<void> registrarMortalidad(
     int loteId,
     int cantidadMuerta,
-  ) async {
-    final connectivity = ConnectivityService();
-    final db = await DBService.database;
+) async {
+  final connectivity = ConnectivityService();
 
-    try {
-      // 📱 PRIMERO: Actualizar SIEMPRE localmente
-      await db.execute(
-        'UPDATE lotes SET cantidad_muertos = cantidad_muertos + ? WHERE id = ?',
-        [cantidadMuerta, loteId],
-      );
-
-      print('✅ Mortalidad actualizada localmente');
-
-      if (await connectivity.isConnected) {
-        // ✅ ONLINE: Enviar al servidor también
-        try {
-          await ApiService.registrarMortalidad({
-            'lote_id': loteId,
-            'cantidad_muerta': cantidadMuerta,
-          });
-          print('✅ Mortalidad enviada al servidor');
-        } catch (e) {
-          // Si falla el servidor, ya tenemos el dato local
-          print('⚠️ Falló envío al servidor, pero se guardó localmente: $e');
-
-          // Encolar para reintentar después
-          await SyncService.queueOperation(
-            operation: 'UPDATE_MORTALIDAD',
-            tableName: 'lotes',
-            data: {'lote_id': loteId, 'cantidad_muerta': cantidadMuerta},
-          );
-        }
-      } else {
-        // 📴 OFFLINE: Solo encolar
-        await SyncService.queueOperation(
-          operation: 'UPDATE_MORTALIDAD',
-          tableName: 'lotes',
-          data: {'lote_id': loteId, 'cantidad_muerta': cantidadMuerta},
-        );
-        print('✅ Mortalidad guardada localmente (offline)');
-      }
-    } catch (e) {
-      print('❌ Error en registrarMortalidad: $e');
-      rethrow;
-    }
+  // 🌐 WEB
+  if (kIsWeb) {
+    await ApiService.registrarMortalidad({
+      'lote_id': loteId,
+      'cantidad_muerta': cantidadMuerta,
+    });
+    return;
   }
 
-  static Future<void> _guardarMortalidadLocal(
-    int loteId,
-    int cantidadMuerta,
-  ) async {
-    final db = await DBService.database;
+  // 📱 MOBILE
+  final db = await DBService.database;
 
-    // 1. Actualizar localmente
-    await db.execute(
-      'UPDATE lotes SET cantidad_muertos = cantidad_muertos + ? WHERE id = ?',
-      [cantidadMuerta, loteId],
-    );
+  await db.execute(
+    'UPDATE lotes SET cantidad_muertos = cantidad_muertos + ? WHERE id = ?',
+    [cantidadMuerta, loteId],
+  );
 
-    // 2. Encolar para sincronización posterior
+  if (connectivity.isConnected) {
+    await ApiService.registrarMortalidad({
+      'lote_id': loteId,
+      'cantidad_muerta': cantidadMuerta,
+    });
+  } else {
     await SyncService.queueOperation(
       operation: 'UPDATE_MORTALIDAD',
       tableName: 'lotes',
-      data: {'lote_id': loteId, 'cantidad_muerta': cantidadMuerta},
+      data: {
+        'lote_id': loteId,
+        'cantidad_muerta': cantidadMuerta,
+      },
     );
   }
+}
 }

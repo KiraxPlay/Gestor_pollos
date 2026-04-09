@@ -1,7 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
 import 'package:synchronized/synchronized.dart';
 
 class DBService {
@@ -17,15 +16,21 @@ class DBService {
   }
 
   static Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'gestorgalpon.db');
+    try {
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, 'gestorgalpon.db');
 
-    return await openDatabase(
-      path,
-      version: 4,
-      onCreate: _createTables,
-      onUpgrade: _upgradeTables,
-    );
+      return await openDatabase(
+        path,
+        version: 4,
+        onCreate: _createTables,
+        onUpgrade: _upgradeTables,
+      );
+    } catch (e) {
+      print('⚠️ Error inicializando base de datos: $e');
+      // En web o si hay error, rethrow para que se maneje en main.dart
+      rethrow;
+    }
   }
 
   static Future<void> _createTables(Database db, int version) async {

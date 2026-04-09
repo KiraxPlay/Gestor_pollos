@@ -56,12 +56,16 @@ class PonederasViewModel extends ChangeNotifier {
 
   Future<void> agregarPonedora(Ponedoras ponedora) async {
     try {
+      print('📍 [ViewModel] agregarPonedora llamado con: ${ponedora.nombre}');
       _error = null;
+      print('📍 [ViewModel] Llamando a PonederasService.insertarPonedora()');
       await PonederasService.insertarPonedora(ponedora);
+      print('📍 [ViewModel] insertarPonedora completado, recargando ponedoras');
       await cargarPonedoras();
+      print('📍 [ViewModel] Ponedoras recargadas');
     } catch (e) {
       _error = e.toString();
-      print('Error agregando ponedora: $e');
+      print('❌ [ViewModel] Error agregando ponedora: $e');
       notifyListeners();
       rethrow;
     }

@@ -237,7 +237,9 @@ class _AgregarPonederasDialogState extends State<AgregarPonederasDialog> {
         muertosSemanales: 0,
       );
 
+      print('🔘 [Dialog] Ejecutando callback onAgregar() con: ${nuevaPonedora.nombre}');
       widget.onAgregar(nuevaPonedora);
+      print('✅ [Dialog] Callback completado');
 
       if (context.mounted) {
         Navigator.pop(context);

@@ -62,6 +62,16 @@ class Ponedoras {
 
   Map<String, dynamic> toJson() => toMap();
 
+  // Método para enviar solo los campos necesarios al crear un nuevo lote
+  Map<String, dynamic> toJsonForCreation() {
+    return {
+      'nombre': nombre,
+      'cantidad_gallinas': cantidadGallinas,
+      'precio_unitario': precioUnitario,
+      'fecha_inicio': fechaInicio,
+    };
+  }
+
   factory Ponedoras.fromMap(Map<String, dynamic> map) {
     int? parseInt(dynamic v) {
       if (v == null) return null;
